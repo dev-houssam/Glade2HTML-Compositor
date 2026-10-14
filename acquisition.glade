@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.40.0 -->
+<interface>
+  <requires lib="gtk+" version="3.24"/>
+
+  <object class="GtkWindow" id="acq_window">
+    <property name="can-focus">False</property>
+    <property name="title" translatable="yes">📥 Acquisition des données</property>
+    <property name="default-width">420</property>
+    <property name="default-height">520</property>
+    <property name="window-position">center</property>
+    <property name="resizable">False</property>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">10</property>
+        <property name="margin-start">14</property>
+        <property name="margin-end">14</property>
+        <property name="margin-top">14</property>
+        <property name="margin-bottom">14</property>
+
+        <!-- Bandeau titre -->
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkLabel" id="acq_title">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">📥 Acquisition</property>
+                <property name="xalign">0</property>
+                <attributes>
+                  <attribute name="scale" value="1.4"/>
+                  <attribute name="weight" value="bold"/>
+                </attributes>
+              </object>
+              <packing><property name="expand">True</property><property name="fill">True</property><property name="position">0</property></packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="acq_status">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">0 données</property>
+                <property name="xalign">1</property>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">1</property></packing>
+            </child>
+          </object>
+          <packing><property name="expand">False</property><property name="fill">True</property><property name="position">0</property></packing>
+        </child>
+
+        <!-- Formulaire de saisie -->
+        <child>
+          <object class="GtkFrame" id="form_frame">
+            <property name="visible">True</property>
+            <property name="label" translatable="yes">Nouvelle entrée</property>
+            <child>
+              <object class="GtkBox">
+                <property name="visible">True</property>
+                <property name="orientation">vertical</property>
+                <property name="spacing">6</property>
+                <property name="margin-top">6</property>
+                <property name="margin-bottom">6</property>
+
+                <!-- Nom -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="spacing">8</property>
+                    <child>
+                      <object class="GtkLabel" id="lbl_name">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">Nom</property>
+                        <property name="xalign">0</property>
+                        <property name="width-request">80</property>
+                      </object>
+                      <packing><property name="expand">False</property><property name="fill">True</property><property name="position">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="acq_name_entry">
+                        <property name="visible">True</property>
+                        <property name="height-request">34</property>
+                        <property name="placeholder-text" translatable="yes">Ex : Ventes Q1</property>
+                      </object>
+                      <packing><property name="expand">True</property><property name="fill">True</property><property name="position">1</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property><property name="fill">True</property><property name="position">0</property></packing>
+                </child>
+
+                <!-- Type -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="spacing">8</property>
+                    <child>
+                      <object class="GtkLabel" id="lbl_type">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">Type</property>
+                        <property name="xalign">0</property>
+                        <property name="width-request">80</property>
+                      </object>
+                      <packing><property name="expand">False</property><property name="fill">True</property><property name="position">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkComboBoxText" id="acq_type_combo">
+                        <property name="visible">True</property>
+                        <property name="height-request">34</property>
+                        <items>
+                          <item translatable="yes">Nombre entier</item>
+                          <item translatable="yes">Nombre décimal</item>
+                          <item translatable="yes">Texte</item>
+                        </items>
+                      </object>
+                      <packing><property name="expand">True</property><property name="fill">True</property><property name="position">1</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property><property name="fill">True</property><property name="position">1</property></packing>
+                </child>
+
+                <!-- Valeur -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="spacing">8</property>
+                    <child>
+                      <object class="GtkLabel" id="lbl_value">
+                        <property name="visible">True</property>
+                        <property name="label" translatable="yes">Valeur</property>
+                        <property name="xalign">0</property>
+                        <property name="width-request">80</property>
+                      </object>
+                      <packing><property name="expand">False</property><property name="fill">True</property><property name="position">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="acq_value_entry">
+                        <property name="visible">True</property>
+                        <property name="height-request">34</property>
+                        <property name="placeholder-text" translatable="yes">Saisir la valeur</property>
+                        <signal name="activate" handler="on_acq_value_activate" swapped="no"/>
+                      </object>
+                      <packing><property name="expand">True</property><property name="fill">True</property><property name="position">1</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property><property name="fill">True</property><property name="position">2</property></packing>
+                </child>
+
+                <!-- Boutons -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="spacing">6</property>
+                    <property name="homogeneous">True</property>
+                    <child>
+                      <object class="GtkButton" id="acq_add_btn">
+                        <property name="label" translatable="yes">➕ Ajouter</property>
+                        <property name="height-request">36</property>
+                        <signal name="clicked" handler="on_acq_add_clicked" swapped="no"/>
+                      </object>
+                      <packing><property name="expand">True</property><property name="fill">True</property><property name="position">0</property></packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="acq_clear_btn">
+                        <property name="label" translatable="yes">🗑 Effacer la saisie</property>
+                        <property name="height-request">36</property>
+                        <signal name="clicked" handler="on_acq_clear_clicked" swapped="no"/>
+                      </object>
+                      <packing><property name="expand">True</property><property name="fill">True</property><property name="position">1</property></packing>
+                    </child>
+                  </object>
+                  <packing><property name="expand">False</property><property name="fill">True</property><property name="position">3</property></packing>
+                </child>
+
+              </object>
+            </child>
+          </object>
+          <packing><property name="expand">False</property><property name="fill">True</property><property name="position">1</property></packing>
+        </child>
+
+        <!-- Liste des données acquises -->
+        <child>
+          <object class="GtkFrame" id="list_frame">
+            <property name="visible">True</property>
+            <property name="label" translatable="yes">Données acquises</property>
+            <child>
+              <object class="GtkScrolledWindow">
+                <property name="visible">True</property>
+                <property name="height-request">220</property>
+                <child>
+                  <object class="GtkBox" id="acq_list">
+                    <property name="visible">True</property>
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">4</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing><property name="expand">True</property><property name="fill">True</property><property name="position">2</property></packing>
+        </child>
+
+        <!-- Boutons globaux -->
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="spacing">6</property>
+            <child>
+              <object class="GtkButton" id="acq_clear_all_btn">
+                <property name="label" translatable="yes">🧹 Tout effacer</property>
+                <property name="height-request">34</property>
+                <signal name="clicked" handler="on_acq_clear_all_clicked" swapped="no"/>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">0</property></packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="acq_send_btn">
+                <property name="label" translatable="yes">📤 Envoyer au traitement</property>
+                <property name="height-request">34</property>
+                <signal name="clicked" handler="on_acq_send_clicked" swapped="no"/>
+              </object>
+              <packing><property name="expand">True</property><property name="fill">True</property><property name="position">1</property></packing>
+            </child>
+          </object>
+          <packing><property name="expand">False</property><property name="fill">True</property><property name="position">3</property></packing>
+        </child>
+
+      </object>
+    </child>
+  </object>
+</interface>

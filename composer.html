@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Compositeur CompoGlueML</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+
+<link rel="stylesheet" href="composer.css">
+</head>
+<body>
+
+<!-- ============================== Barre d'outils ============================== -->
+<header id="toolbar">
+  <h1>Compositeur CompoGlueML</h1>
+
+  <label class="btn-file">
+    ➕ Ajouter un .glade
+    <input type="file" id="file-input" accept=".glade,.xml" multiple>
+  </label>
+
+  <label class="btn-file" title="Ouvrir un projet .cgml.json">
+    📂 Ouvrir projet
+    <input type="file" id="project-input" accept=".cgml.json,application/json">
+  </label>
+
+  <button id="btn-clear" title="Tout effacer">🗑 Vider</button>
+  <button id="btn-preview" title="Activer la prévisualisation des handlers">▶ Tester</button>
+  <button id="btn-save-project" title="Sauvegarder le projet en .cgml.json">💾 Projet</button>
+  <button id="btn-export" title="Exporter en .cgml.html" disabled>📤 Export HTML</button>
+
+  <div class="spacer"></div>
+
+  <span id="status">Prêt.</span>
+</header>
+
+<!-- ============================== Corps ============================== -->
+<main id="layout">
+
+  <section id="stage-wrapper">
+    <div id="stage">
+      <div class="stage-hint" id="stage-hint">
+        <p>Déposez des fichiers <code>.glade</code> ici</p>
+        <p class="sub">ou cliquez sur « Ajouter un .glade » dans la barre d'outils</p>
+      </div>
+    </div>
+  </section>
+
+  <aside id="sidebar">
+    <h2>Projet</h2>
+    <div id="project-info">
+      <div class="info-row"><span class="label">Nom</span><span id="info-name" class="value">—</span></div>
+      <div class="info-row"><span class="label">Version</span><span id="info-version" class="value">—</span></div>
+      <div class="info-row"><span class="label">Auteur</span><span id="info-author" class="value">—</span></div>
+      <div class="info-row"><span class="label">Modifié</span><span id="info-updated" class="value">—</span></div>
+      <div class="info-row"><span class="label">Fenêtres</span><span id="info-wc" class="value">0</span></div>
+      <div class="info-row"><span class="label">Handlers</span><span id="info-hc" class="value">0</span></div>
+      <div class="info-row"><span class="label">Signaux</span><span id="info-sc" class="value">0</span></div>
+      <button id="btn-edit-info" class="btn-small">✎ Modifier les infos</button>
+    </div>
+
+    <h2 style="margin-top:16px">Fenêtres</h2>
+    <ul id="window-list"></ul>
+  </aside>
+
+</main>
+
+<!-- ============================== Inspecteur ============================== -->
+<section id="inspector" class="hidden">
+  <header id="inspector-header">
+    <div class="inspector-title">
+      <span class="badge" id="inspector-window-id">—</span>
+      <span id="inspector-window-name">Aucune sélection</span>
+    </div>
+    <div class="inspector-meta">
+      <span id="inspector-signal-count">0 signal</span>
+      <button id="inspector-close" title="Fermer">✕</button>
+    </div>
+  </header>
+
+  <div id="inspector-body">
+    <div id="signals-list"></div>
+    <div id="no-selection">
+      <p>Sélectionnez une fenêtre sur le canevas pour éditer ses handlers.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== Modale métadonnées ============================== -->
+<div id="modal-overlay" class="hidden">
+  <div id="modal">
+    <header class="modal-header">
+      <h2>Informations du projet</h2>
+      <button id="modal-close" class="modal-close">✕</button>
+    </header>
+    <div class="modal-body">
+      <label class="field">
+        <span>Nom de l'application</span>
+        <input type="text" id="meta-name" placeholder="Mon application">
+      </label>
+      <label class="field">
+        <span>Description</span>
+        <textarea id="meta-description" rows="3" placeholder="Description courte du projet…"></textarea>
+      </label>
+      <div class="field-row">
+        <label class="field">
+          <span>Version</span>
+          <input type="text" id="meta-version" placeholder="0.1.0">
+        </label>
+        <label class="field">
+          <span>Auteur</span>
+          <input type="text" id="meta-author" placeholder="Votre nom">
+        </label>
+      </div>
+    </div>
+    <footer class="modal-footer">
+      <button id="modal-cancel" class="btn-secondary">Annuler</button>
+      <button id="modal-save" class="btn-primary">Enregistrer</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============================== Dépendances ============================== -->
+<script src="glade2html.js"></script>
+<script src="glade-viewer.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+
+<script src="composer.js"></script>
+
+</body>
+</html>

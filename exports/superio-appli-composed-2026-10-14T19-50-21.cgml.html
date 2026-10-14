@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>superio_appli_composed</title>
+<style>
+/* === Styles du canevas exporté === */
+html, body { margin: 0; padding: 0; min-height: 100vh; background: #2e3436;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 13px; color: #e0e0e0; }
+#cgml-stage { position: relative; width: 100%; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+.cgml-window { position: absolute; }
+.cgml-window .gtk-window { box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.cgml-window.titlebar-hidden .gtk-titlebar { display: none; }
+.cgml-window.titlebar-hidden .gtk-window {
+  border-top-left-radius: 0; border-top-right-radius: 0;
+}
+
+/* === Styles GTK Adwaita === */
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 20px;
+      display: flex; align-items: flex-start; justify-content: center;
+      background: #2e3436;
+      font-family: "Cantarell", "Segoe UI", system-ui, sans-serif;
+      font-size: 14px;
+      color: #2e3436;
+    }
+
+    /* ============================================================
+     * Fenêtre GTK
+     * ============================================================ */
+    .gtk-window {
+      background: #fff;
+      border: 1px solid #d4d0c8;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+      display: inline-flex;
+      flex-direction: column;
+      max-width: 100%;
+      overflow: hidden;
+    }
+    .gtk-titlebar {
+      background: linear-gradient(#f8f7f6, #eae8e6);
+      border-bottom: 1px solid #d4d0c8;
+      padding: 8px 12px;
+      text-align: center;
+      font-weight: 600;
+      flex: 0 0 auto;
+    }
+    .gtk-window-body {
+      padding: 10px;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .gtk-window-body::-webkit-scrollbar { width: 8px; }
+    .gtk-window-body::-webkit-scrollbar-thumb {
+      background: #c8c4bf; border-radius: 4px;
+    }
+    .gtk-window-body::-webkit-scrollbar-track { background: transparent; }
+
+    /* ============================================================
+     * Layout
+     * ============================================================ */
+    .gtk-box { display: flex; }
+    .gtk-box.vertical   { flex-direction: column; }
+    .gtk-box.horizontal { flex-direction: row; }
+
+    /* === Enfants de GtkBox : comportement flex approprié === */
+    /* Les boutons, combos, checks, radios ne se compressent pas */
+    .gtk-box > .gtk-button,
+    .gtk-box > .gtk-combo,
+    .gtk-box > .gtk-check,
+    .gtk-box > .gtk-radio,
+    .gtk-box > .gtk-switch {
+      flex-shrink: 0;
+    }
+    /* Les entrées ont une largeur minimale garantie mais peuvent s'étendre */
+    .gtk-box > .gtk-entry,
+    .gtk-box > .gtk-textview {
+      min-width: 100px;
+      flex-grow: 1;
+      flex-shrink: 1;
+    }
+
+    /* ============================================================
+     * Boutons
+     * ============================================================ */
+    .gtk-button {
+      background: linear-gradient(#fdfdfc, #f0eeec);
+      border: 1px solid #cdc7c1;
+      border-radius: 5px;
+      padding: 4px 10px;
+      font: inherit;
+      cursor: pointer;
+      min-height: 30px;
+      color: inherit;
+      transition: background .1s;
+    }
+    .gtk-button:hover  { background: linear-gradient(#fff, #f6f5f4); }
+    .gtk-button:active { background: #dcd9d6; }
+    .gtk-button.disabled { opacity: .5; pointer-events: none; }
+
+    /* ============================================================
+     * Labels
+     * ============================================================ */
+    .gtk-label { display: inline-block; }
+
+    /* ============================================================
+     * Entrées / TextArea
+     * ============================================================ */
+    .gtk-entry, .gtk-textview {
+      background: #fff;
+      border: 1px solid #c0bdb8;
+      border-radius: 5px;
+      padding: 6px 10px;
+      font: inherit;
+      outline: none;
+      min-height: 30px;
+      color: #2e3436;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .gtk-entry:focus, .gtk-textview:focus {
+      border-color: #3584e4;
+      box-shadow: 0 0 0 2px rgba(53,132,228,.25);
+    }
+    .gtk-entry[readonly] { background: #fafafa; }
+
+    /* ============================================================
+     * Combos
+     * ============================================================ */
+    .gtk-combo {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-color: #fff;
+      background-image:
+        linear-gradient(45deg, transparent 50%, #666 50%),
+        linear-gradient(135deg, #666 50%, transparent 50%),
+        linear-gradient(to right, #d4d0c8, #d4d0c8);
+      background-position:
+        calc(100% - 14px) 50%,
+        calc(100% - 9px)  50%,
+        calc(100% - 28px) 50%;
+      background-size:
+        5px 5px,
+        5px 5px,
+        1px 60%;
+      background-repeat: no-repeat;
+      border: 1px solid #c0bdb8;
+      border-radius: 5px;
+      padding: 6px 32px 6px 10px;
+      font: inherit;
+      color: #2e3436;
+      cursor: pointer;
+      outline: none;
+      min-height: 30px;
+      min-width: 100px;
+      width: auto;
+    }
+    .gtk-combo:hover  { background-color: #f8f8f8; }
+    .gtk-combo:focus  {
+      border-color: #3584e4;
+      box-shadow: 0 0 0 2px rgba(53,132,228,.25);
+    }
+    .gtk-combo option {
+      background: #fff;
+      color: #2e3436;
+      padding: 4px;
+    }
+
+    /* ============================================================
+     * Check / Radio / Switch — reset + style custom
+     * ============================================================ */
+    .gtk-check input[type="checkbox"],
+    .gtk-radio input[type="radio"],
+    .gtk-switch input[type="checkbox"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      padding: 0;
+      border: 1px solid #b8b4ae;
+      background: #fff;
+      cursor: pointer;
+      flex: 0 0 auto;
+      position: relative;
+      transition: background .1s, border-color .1s;
+      vertical-align: middle;
+    }
+    .gtk-check input[type="checkbox"],
+    .gtk-switch input[type="checkbox"] { border-radius: 3px; }
+    .gtk-radio input[type="radio"]     { border-radius: 50%; }
+
+    .gtk-check input[type="checkbox"]:hover,
+    .gtk-radio input[type="radio"]:hover,
+    .gtk-switch input[type="checkbox"]:hover {
+      border-color: #8a8a8a;
+      background: #fafafa;
+    }
+
+    .gtk-check input[type="checkbox"]:checked,
+    .gtk-switch input[type="checkbox"]:checked {
+      background: #3584e4;
+      border-color: #3584e4;
+    }
+    .gtk-check input[type="checkbox"]:checked::after,
+    .gtk-switch input[type="checkbox"]:checked::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 5px;
+      height: 9px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .gtk-radio input[type="radio"]:checked {
+      background: #3584e4;
+      border-color: #3584e4;
+    }
+    .gtk-radio input[type="radio"]:checked::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .gtk-check, .gtk-radio, .gtk-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 3px 0;
+      font-size: 13px;
+      user-select: none;
+    }
+    .gtk-check span, .gtk-radio span { line-height: 1.2; }
+
+    /* ============================================================
+     * Frame
+     * ============================================================ */
+    .gtk-frame {
+      border: 1px solid #cdc7c1;
+      border-radius: 6px;
+      padding: 12px 14px 14px;
+      margin: 4px 0;
+      min-width: 0;
+    }
+    .gtk-frame > legend {
+      padding: 0 8px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #4a4a4a;
+      margin-left: 4px;
+    }
+
+    /* ============================================================
+     * Notebook
+     * ============================================================ */
+    .gtk-notebook-tabs {
+      display: flex;
+      border-bottom: 1px solid #cdc7c1;
+      flex: 0 0 auto;
+    }
+    .gtk-notebook-tab {
+      background: transparent;
+      border: none;
+      padding: 6px 14px;
+      cursor: pointer;
+      font: inherit;
+      border-bottom: 2px solid transparent;
+      color: #666;
+    }
+    .gtk-notebook-tab.active {
+      border-color: #3584e4;
+      color: #3584e4;
+    }
+    .gtk-notebook-panes { flex: 1 1 auto; overflow: auto; }
+    .gtk-notebook-pane { display: none; padding: 10px; }
+    .gtk-notebook-pane.active { display: block; }
+
+    /* ============================================================
+     * Séparateur
+     * ============================================================ */
+    .gtk-separator.horizontal { height: 1px; background: #d4d0c8; margin: 6px 0; }
+    .gtk-separator.vertical   { width: 1px; background: #d4d0c8; margin: 0 6px; }
+
+    /* ============================================================
+     * Barre de progression
+     * ============================================================ */
+    .gtk-progress {
+      background: #e0ddd8;
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+      min-width: 100px;
+    }
+    .gtk-progress-fill {
+      height: 100%;
+      background: #3584e4;
+      transition: width .2s;
+    }
+
+    /* ============================================================
+     * Expander
+     * ============================================================ */
+    .gtk-expander > summary {
+      cursor: pointer;
+      padding: 4px 0;
+      font-weight: 600;
+      font-size: 12px;
+      color: #555;
+      list-style: none;
+    }
+    .gtk-expander > summary::-webkit-details-marker { display: none; }
+    .gtk-expander > summary::before {
+      content: "▸";
+      display: inline-block;
+      width: 14px;
+      transition: transform .15s;
+    }
+    .gtk-expander[open] > summary::before { transform: rotate(90deg); }
+
+    /* ============================================================
+     * ScrolledWindow
+     * ============================================================ */
+    .gtk-scrolled {
+      overflow: auto;
+      max-height: 400px;
+    }
+    .gtk-scrolled > .gtk-box { min-height: 0; }
+
+    /* ============================================================
+     * Grid
+     * ============================================================ */
+    .gtk-grid { display: grid; }
+
+    /* ============================================================
+     * Widgets non supportés
+     * ============================================================ */
+    .gtk-unsupported {
+      border: 1px dashed #d75a4a;
+      color: #d75a4a;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    /* ============================================================
+     * Icônes (fallback)
+     * ============================================================ */
+    .gtk-icon { font-style: italic; color: #7a7a7a; }
+  
+</style>
+</head>
+<body>
+<div id="cgml-stage">
+    <div class="cgml-window" data-window-id="w1" data-glade-name="acquisition.glade" style="left:0px; top:0px; z-index:11; width:420px; height:772px;">
+      
+<div class="gtk-window fixed-size" style="width: 420px; height: 772px;"><div class="gtk-titlebar">📥 Acquisition des données</div><div class="gtk-window-body"><div class="gtk-box vertical" style="gap: 10px; padding: 14px;"><div class="gtk-box horizontal" style="gap: 8px; padding: 0px;"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; font-size: 19.6px; font-weight: bold; flex: 1 1 0px;" data-glade-id="acq_title">📥 Acquisition</span><span class="gtk-label" style="text-align: right; display: inline-block; width: 100%;" data-glade-id="acq_status">0 données</span></div><fieldset class="gtk-frame" data-glade-id="form_frame"><legend>Nouvelle entrée</legend><div class="gtk-box vertical" style="gap: 6px; padding: 6px 0px;"><div class="gtk-box horizontal" style="gap: 8px; padding: 0px;"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; min-width: 80px;" data-glade-id="lbl_name">Nom</span><input class="gtk-entry" type="text" placeholder="Ex : Ventes Q1" style="min-height: 34px; flex: 1 1 0px;" data-glade-id="acq_name_entry"></div><div class="gtk-box horizontal" style="gap: 8px; padding: 0px;"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; min-width: 80px;" data-glade-id="lbl_type">Type</span><select class="gtk-combo" style="min-height: 34px; flex: 1 1 0px;" data-glade-id="acq_type_combo"><option>Nombre entier</option><option>Nombre décimal</option><option>Texte</option></select></div><div class="gtk-box horizontal" style="gap: 8px; padding: 0px;"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; min-width: 80px;" data-glade-id="lbl_value">Valeur</span><input class="gtk-entry" type="text" placeholder="Saisir la valeur" style="min-height: 34px; flex: 1 1 0px;" data-glade-handler="on_acq_value_activate" data-glade-signal="activate" data-glade-id="acq_value_entry"></div><div class="gtk-box horizontal" style="gap: 6px; padding: 0px;"><button class="gtk-button" style="min-height: 36px; flex: 1 1 0px;" data-glade-handler="on_acq_add_clicked" data-glade-signal="clicked" data-glade-id="acq_add_btn">➕ Ajouter</button><button class="gtk-button" style="min-height: 36px; flex: 1 1 0px;" data-glade-handler="on_acq_clear_clicked" data-glade-signal="clicked" data-glade-id="acq_clear_btn">🗑 Effacer la saisie</button></div></div></fieldset><fieldset class="gtk-frame" data-glade-id="list_frame" style="flex: 1 1 0px;"><legend>Données acquises</legend><div class="gtk-scrolled" style="max-height: 220px; min-height: 220px;"><div class="gtk-box vertical" style="gap: 4px; padding: 0px;" data-glade-id="acq_list"></div></div></fieldset><div class="gtk-box horizontal" style="gap: 6px; padding: 0px;"><button class="gtk-button" style="min-height: 34px;" data-glade-handler="on_acq_clear_all_clicked" data-glade-signal="clicked" data-glade-id="acq_clear_all_btn">🧹 Tout effacer</button><button class="gtk-button" style="min-height: 34px; flex: 1 1 0px;" data-glade-handler="on_acq_send_clicked" data-glade-signal="clicked" data-glade-id="acq_send_btn">📤 Envoyer au traitement</button></div></div></div></div>
+
+
+    </div>
+    <div class="cgml-window titlebar-hidden" data-window-id="w2" data-glade-name="traitement.glade" style="left:418px; top:35px; z-index:16; width:439px; height:737px;">
+      
+<div class="gtk-window fixed-size" style="width: 439px; height: 737px;"><div class="gtk-titlebar">⚙️ Traitement des données</div><div class="gtk-window-body"><div class="gtk-box vertical" style="gap: 10px; padding: 14px;"><div class="gtk-box horizontal" style="gap: 8px; padding: 0px;"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; font-size: 19.6px; font-weight: bold; flex: 1 1 0px;" data-glade-id="trt_title">⚙️ Traitement</span><span class="gtk-label" style="text-align: right; display: inline-block; width: 100%;" data-glade-id="trt_status">Aucune donnée reçue</span></div><fieldset class="gtk-frame" data-glade-id="op_frame"><legend>Opération à appliquer</legend><div class="gtk-box vertical" style="gap: 6px; padding: 6px 0px;"><label class="gtk-radio" data-glade-handler="on_op_changed" data-glade-signal="toggled" data-glade-id="op_sum"><input type="radio" name="grp_op_sum"><span>Somme (Σ)</span></label><label class="gtk-radio" data-glade-handler="on_op_changed" data-glade-signal="toggled" data-glade-id="op_avg"><input type="radio" name="grp_op_sum"><span>Moyenne (x̄)</span></label><label class="gtk-radio" data-glade-handler="on_op_changed" data-glade-signal="toggled" data-glade-id="op_min"><input type="radio" name="grp_op_sum"><span>Minimum (min)</span></label><label class="gtk-radio" data-glade-handler="on_op_changed" data-glade-signal="toggled" data-glade-id="op_max"><input type="radio" name="grp_op_sum"><span>Maximum (max)</span></label><label class="gtk-radio" data-glade-handler="on_op_changed" data-glade-signal="toggled" data-glade-id="op_count"><input type="radio" name="grp_op_sum"><span>Nombre d'éléments (count)</span></label></div></fieldset><div class="gtk-box horizontal" style="gap: 6px; padding: 0px;"><button class="gtk-button" style="min-height: 38px; flex: 1 1 0px;" data-glade-handler="on_exec_clicked" data-glade-signal="clicked" data-glade-id="trt_exec_btn">▶ Exécuter</button><button class="gtk-button" style="min-height: 38px;" data-glade-handler="on_refresh_clicked" data-glade-signal="clicked" data-glade-id="trt_refresh_btn">🔄 Rafraîchir</button></div><fieldset class="gtk-frame" data-glade-id="recv_frame" style="flex: 1 1 0px;"><legend>Données reçues</legend><div class="gtk-scrolled" style="max-height: 130px; min-height: 130px;"><div class="gtk-box vertical" style="gap: 3px; padding: 0px;" data-glade-id="trt_data_list"></div></div></fieldset><fieldset class="gtk-frame" data-glade-id="result_frame"><legend>Résultat</legend><div class="gtk-box vertical" style="gap: 6px; padding: 6px 0px;"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; font-size: 25.2px; font-weight: bold;" data-glade-id="trt_result_label">—</span><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%;" data-glade-id="trt_result_detail">En attente d'exécution…</span></div></fieldset><details class="gtk-expander" data-glade-id="trt_history_expander"><summary>Historique des traitements</summary><div class="gtk-scrolled" style="max-height: 90px; min-height: 90px;"><div class="gtk-box vertical" style="gap: 2px; padding: 0px;" data-glade-id="trt_history"></div></div></details></div></div></div>
+
+
+    </div>
+</div>
+
+<script>
+/* ==================================================================
+ * superio_appli_composed
+ * OK
+ * Version : 0.1.0
+ * Auteur  : Houssam BACAR
+ * Exporté : 2026-10-14T19:50:21.313Z
+ * 2 fenêtre(s), 8 handler(s)
+ * ================================================================== */
+window.__cgmlAttach = function (root, handlers, options) {
+  options = options || {};
+  var GTK_EVENT = { clicked:"click", toggled:"change", changed:"input",
+    activate:"click", "state-set":"change", value_changed:"input" };
+  function extractValue(el, evt) {
+    var t = el.tagName.toLowerCase();
+    if (t === "input" || t === "textarea" || t === "select") {
+      if (el.type === "checkbox" || el.type === "radio") return el.checked;
+      return el.value;
+    }
+    return evt === "click" ? true : undefined;
+  }
+  var widgets = {};
+  root.querySelectorAll("[data-glade-id]").forEach(function (el) {
+    widgets[el.dataset.gladeId] = el;
+  });
+  var bound = [];
+  root.querySelectorAll("[data-glade-handler]").forEach(function (el) {
+    var h = el.dataset.gladeHandler;
+    var gtkSig = el.dataset.gladeSignal || "click";
+    var domEvt = GTK_EVENT[gtkSig] || "click";
+    var listener = function (ev) {
+      var win = el.closest(".cgml-window");
+      if (win) window.__lastClickedWindow = win;
+      var payload = {
+        widgetId: el.dataset.gladeId || "",
+        gtkSignal: gtkSig,
+        value: extractValue(el, domEvt),
+        element: el,
+        nativeEvent: ev
+      };
+      var fn = handlers[h];
+      if (typeof fn === "function") {
+        try { fn(payload); } catch (e) { console.error("[cgml] " + h + " :", e); }
+      }
+      if (options.onSignal) options.onSignal(h, payload);
+    };
+    el.addEventListener(domEvt, listener);
+    bound.push({ el: el, evt: domEvt, fn: listener });
+  });
+  return {
+    widgets: widgets,
+    getWidget: function (id) { return widgets[id] || null; },
+    destroy: function () { bound.forEach(function(b){ b.el.removeEventListener(b.evt, b.fn); }); }
+  };
+};
+
+var handlers = {
+  on_acq_value_activate: (function(){
+    try {
+      // Handler : on_acq_value_activate
+// Widget  : #acq_value_entry
+// Signal  : activate
+function on_acq_value_activate(payload) {
+  // payload.widgetId — id Glade de la source
+  // payload.value    — valeur (checkbox, entry…)
+  // payload.element  — élément DOM source
+  // payload.nativeEvent — événement DOM brut
+  
+  // TODO : votre logique ici
+}
+      return on_acq_value_activate;
+    } catch (e) {
+      console.error("Handler on_acq_value_activate :", e);
+      return function(){};
+    }
+  })(),
+  on_acq_add_clicked: (function(){
+    try {
+      // Handler : on_acq_add_clicked
+// Widget  : #acq_add_btn
+// Signal  : clicked
+function on_acq_add_clicked(payload) {
+  // payload.widgetId — id Glade de la source
+  // payload.value    — valeur (checkbox, entry…)
+  // payload.element  — élément DOM source
+  // payload.nativeEvent — événement DOM brut
+  
+  // TODO : votre logique ici
+}
+      return on_acq_add_clicked;
+    } catch (e) {
+      console.error("Handler on_acq_add_clicked :", e);
+      return function(){};
+    }
+  })(),
+  on_acq_clear_clicked: (function(){
+    try {
+      // Handler : on_acq_clear_clicked
+// Widget  : #acq_clear_btn
+// Signal  : clicked
+function on_acq_clear_clicked(payload) {
+  // payload.widgetId — id Glade de la source
+  // payload.value    — valeur (checkbox, entry…)
+  // payload.element  — élément DOM source
+  // payload.nativeEvent — événement DOM brut
+  
+  // TODO : votre logique ici
+}
+      return on_acq_clear_clicked;
+    } catch (e) {
+      console.error("Handler on_acq_clear_clicked :", e);
+      return function(){};
+    }
+  })(),
+  on_acq_clear_all_clicked: (function(){
+    try {
+      // Handler : on_acq_clear_all_clicked
+// Widget  : #acq_clear_all_btn
+// Signal  : clicked
+function on_acq_clear_all_clicked(payload) {
+  // payload.widgetId — id Glade de la source
+  // payload.value    — valeur (checkbox, entry…)
+  // payload.element  — élément DOM source
+  // payload.nativeEvent — événement DOM brut
+  
+  // TODO : votre logique ici
+}
+      return on_acq_clear_all_clicked;
+    } catch (e) {
+      console.error("Handler on_acq_clear_all_clicked :", e);
+      return function(){};
+    }
+  })(),
+  on_acq_send_clicked: (function(){
+    try {
+      // Handler : on_acq_send_clicked
+// Widget  : #acq_send_btn
+// Signal  : clicked
+function on_acq_send_clicked(payload) {
+  // payload.widgetId — id Glade de la source
+  // payload.value    — valeur (checkbox, entry…)
+  // payload.element  — élément DOM source
+  // payload.nativeEvent — événement DOM brut
+  
+  // TODO : votre logique ici
+}
+      return on_acq_send_clicked;
+    } catch (e) {
+      console.error("Handler on_acq_send_clicked :", e);
+      return function(){};
+    }
+  })(),
+  on_op_changed: (function(){
+    try {
+      // Handler : on_op_changed
+// Widget  : #op_sum
+// Signal  : toggled
+function on_op_changed(payload) {
+  // payload.widgetId — id Glade de la source
+  // payload.value    — valeur (checkbox, entry…)
+  // payload.element  — élément DOM source
+  // payload.nativeEvent — événement DOM brut
+  
+  // TODO : votre logique ici
+}
+      return on_op_changed;
+    } catch (e) {
+      console.error("Handler on_op_changed :", e);
+      return function(){};
+    }
+  })(),
+  on_exec_clicked: (function(){
+    try {
+      // Handler : on_exec_clicked
+// Widget  : #trt_exec_btn
+// Signal  : clicked
+function on_exec_clicked(payload) {
+  // payload.widgetId — id Glade de la source
+  // payload.value    — valeur (checkbox, entry…)
+  // payload.element  — élément DOM source
+  // payload.nativeEvent — événement DOM brut
+  
+  // TODO : votre logique ici
+}
+      return on_exec_clicked;
+    } catch (e) {
+      console.error("Handler on_exec_clicked :", e);
+      return function(){};
+    }
+  })(),
+  on_refresh_clicked: (function(){
+    try {
+      // Handler : on_refresh_clicked
+// Widget  : #trt_refresh_btn
+// Signal  : clicked
+function on_refresh_clicked(payload) {
+  // payload.widgetId — id Glade de la source
+  // payload.value    — valeur (checkbox, entry…)
+  // payload.element  — élément DOM source
+  // payload.nativeEvent — événement DOM brut
+  
+  // TODO : votre logique ici
+}
+      return on_refresh_clicked;
+    } catch (e) {
+      console.error("Handler on_refresh_clicked :", e);
+      return function(){};
+    }
+  })()
+};
+
+(function(){
+  var __views = [];
+  var __winsByName = {};
+  var __winsById = {};
+  document.querySelectorAll(".cgml-window").forEach(function(el){
+    __winsByName[el.dataset.gladeName] = el;
+    __winsById[el.dataset.windowId] = el;
+  });
+  window.__lastClickedWindow = null;
+  window.Composer = {
+    current: function(){
+      if (window.__lastClickedWindow) {
+        var wid = window.__lastClickedWindow.dataset.windowId;
+        if (wid && __winsById[wid]) return __winsById[wid];
+      }
+      var keys = Object.keys(__winsById);
+      return keys.length ? __winsById[keys[0]] : null;
+    },
+    widget: function(gladeId){
+      if (window.__lastClickedWindow) {
+        var el = window.__lastClickedWindow.querySelector('[data-glade-id="' + gladeId + '"]');
+        if (el) return el;
+      }
+      var keys = Object.keys(__winsById);
+      for (var i = keys.length - 1; i >= 0; i--) {
+        var w = __winsById[keys[i]];
+        var el2 = w.querySelector('[data-glade-id="' + gladeId + '"]');
+        if (el2) return el2;
+      }
+      return null;
+    },
+    widgetIn: function(gladeName, gladeId){
+      var w = __winsByName[gladeName];
+      if (!w) return null;
+      return w.querySelector('[data-glade-id="' + gladeId + '"]');
+    },
+    widgetsIn: function(gladeName){
+      var w = __winsByName[gladeName];
+      if (!w) return {};
+      var out = {};
+      w.querySelectorAll("[data-glade-id]").forEach(function(el){
+        out[el.dataset.gladeId] = el;
+      });
+      return out;
+    },
+    setStatus: function(t){ document.title = "CompoGlueML — " + t; },
+    allWindows: function(){ return __winsById; }
+  };
+  document.querySelectorAll(".cgml-window").forEach(function(el){
+    var view = window.__cgmlAttach(el, handlers, {
+      onSignal: function(name, payload){
+        console.log("[cgml]", name, payload && payload.widgetId);
+      }
+    });
+    __views.push(view);
+  });
+  console.log("[cgml] " + __views.length + " fenêtre(s), " + Object.keys(handlers).length + " handler(s).");
+})();
+</script>
+</body>
+</html>

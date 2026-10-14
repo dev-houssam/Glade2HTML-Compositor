@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Mon app — intégration Glade2HTML</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    height: 100vh;
+    background: #1e1e1e; color: #eee;
+  }
+  aside {
+    background: #2b2b2b;
+    border-right: 1px solid #3d3d3d;
+    padding: 16px;
+    overflow: auto;
+  }
+  aside h1 { font-size: 16px; margin: 0 0 12px; }
+  aside p  { font-size: 13px; opacity: .7; line-height: 1.5; }
+
+  #glade-host {
+    background: #2e3436;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    padding: 24px;
+  }
+
+  /* Mode inline : boîte style fenêtre GTK */
+  .glade-host.inline-mode > *:not(style) {
+    /* Contient le GtkWindow */
+  }
+
+  .tab-bar { display: flex; gap: 8px; margin-top: 16px; }
+  .tab-bar button {
+    flex: 1; padding: 6px 10px;
+    background: #3a3a3a; color: #eee;
+    border: 1px solid #3d3d3d; border-radius: 6px;
+    cursor: pointer; font: inherit;
+  }
+  .tab-bar button.active { background: #3584e4; border-color: #3584e4; }
+
+  .log {
+    margin-top: 16px;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    background: #141414;
+    padding: 8px;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow: auto;
+    white-space: pre-wrap;
+  }
+</style>
+</head>
+<body>
+
+<aside>
+  <h1>Contrôles de l'app</h1>
+  <p>
+    Cette page simule ton application. Elle charge un fichier
+    <code>.glade</code> et l'affiche dans la zone de droite.
+  </p>
+
+  <label style="display:block;margin-top:12px;">
+    <input type="file" id="file-input" accept=".glade,.xml">
+  </label>
+
+  <div class="tab-bar">
+    <button id="mode-inline"  class="active">Inline</button>
+    <button id="mode-iframe">Iframe</button>
+  </div>
+
+  <div class="log" id="log">—</div>
+</aside>
+
+<main id="glade-host"></main>
+
+<!-- 1. Le moteur de rendu -->
+<script src="glade2html.js"></script>
+<!-- 2. La couche d'intégration -->
+<script src="glade-viewer.js"></script>
+
+<script>
+(function () {
+  const host     = document.getElementById('glade-host');
+  const fileIn   = document.getElementById('file-input');
+  const logEl    = document.getElementById('log');
+  const btnIn    = document.getElementById('mode-inline');
+  const btnIfr   = document.getElementById('mode-iframe');
+
+  let currentXml = null;
+  let currentMode = 'inline';
+  let mounted = null;
+
+  function log(msg) {
+    logEl.textContent += '\n' + msg;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  /* -------- Montage selon le mode choisi -------- */
+  function mount(xml) {
+    if (!xml) return;
+
+    // Démontage propre
+    if (mounted && currentMode === 'inline') host.innerHTML = '';
+
+    const opts = {
+      height: '100%',
+      onSignal: (id, ev) => log(`[signal] clic sur ${id}`)
+    };
+
+    try {
+      if (currentMode === 'inline') {
+        mounted = GladeViewer.mountInline(host, xml, opts);
+      } else {
+        mounted = GladeViewer.mountIframe(host, xml, opts);
+      }
+      log(`✔ ${mounted.rootIds.length} fenêtre(s) — mode ${currentMode}`);
+      mounted.warnings.forEach(w => log('⚠ ' + w));
+    } catch (e) {
+      log('❌ ' + e.message);
+    }
+  }
+
+  /* -------- Chargement d'un fichier -------- */
+  fileIn.addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    currentXml = await f.text();
+    log('Fichier chargé : ' + f.name);
+    mount(currentXml);
+  });
+
+  /* -------- Drag & drop sur la zone principale -------- */
+  host.addEventListener('dragover', e => { e.preventDefault(); host.style.outline = '2px dashed #3584e4'; });
+  host.addEventListener('dragleave', () => host.style.outline = '');
+  host.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    host.style.outline = '';
+    const f = e.dataTransfer.files[0];
+    if (!f) return;
+    currentXml = await f.text();
+    log('Déposé : ' + f.name);
+    mount(currentXml);
+  });
+
+  /* -------- Bascule de mode -------- */
+  btnIn.addEventListener('click', () => {
+    currentMode = 'inline';
+    btnIn.classList.add('active'); btnIfr.classList.remove('active');
+    host.innerHTML = '';
+    if (currentXml) mount(currentXml);
+  });
+  btnIfr.addEventListener('click', () => {
+    currentMode = 'iframe';
+    btnIfr.classList.add('active'); btnIn.classList.remove('active');
+    host.innerHTML = '';
+    if (currentXml) mount(currentXml);
+  });
+
+  log('Prêt. Charge un .glade ou dépose-le sur la zone de droite.');
+})();
+</script>
+
+</body>
+</html>

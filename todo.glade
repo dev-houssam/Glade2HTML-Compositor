@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.40.0 -->
+<interface>
+  <requires lib="gtk+" version="3.24"/>
+
+  <object class="GtkWindow" id="todo_window">
+    <property name="can-focus">False</property>
+    <property name="title" translatable="yes">Gestionnaire de tâches</property>
+    <property name="default-width">560</property>
+    <property name="default-height">620</property>
+    <property name="window-position">center</property>
+    <property name="resizable">False</property>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">8</property>
+        <property name="margin-start">12</property>
+        <property name="margin-end">12</property>
+        <property name="margin-top">12</property>
+        <property name="margin-bottom">12</property>
+
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkLabel" id="app_title">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">📝 Mes tâches</property>
+                <property name="xalign">0</property>
+                <attributes>
+                  <attribute name="scale" value="1.4"/>
+                  <attribute name="weight" value="bold"/>
+                </attributes>
+              </object>
+              <packing><property name="expand">True</property><property name="fill">True</property><property name="position">0</property></packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="counter_label">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">0 tâche</property>
+                <property name="xalign">1</property>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">1</property></packing>
+            </child>
+          </object>
+          <packing><property name="expand">False</property><property name="fill">True</property><property name="position">0</property></packing>
+        </child>
+
+        <child>
+          <object class="GtkFrame" id="add_frame">
+            <property name="visible">True</property>
+            <property name="label" translatable="yes">Nouvelle tâche</property>
+            <child>
+              <object class="GtkBox">
+                <property name="visible">True</property>
+                <property name="spacing">6</property>
+                <property name="margin-top">6</property>
+                <property name="margin-bottom">6</property>
+
+                <child>
+                  <object class="GtkEntry" id="new_task_entry">
+                    <property name="visible">True</property>
+                    <property name="height-request">36</property>
+                    <property name="placeholder-text" translatable="yes">Que devez-vous faire ?</property>
+                    <signal name="activate" handler="on_entry_activate" swapped="no"/>
+                    <signal name="changed"  handler="on_entry_changed"  swapped="no"/>
+                  </object>
+                  <packing><property name="expand">True</property><property name="fill">True</property><property name="position">0</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkComboBoxText" id="priority_combo">
+                    <property name="visible">True</property>
+                    <property name="height-request">36</property>
+                    <signal name="changed" handler="on_priority_changed" swapped="no"/>
+                    <items>
+                      <item translatable="yes">Basse</item>
+                      <item translatable="yes">Normale</item>
+                      <item translatable="yes">Haute</item>
+                    </items>
+                  </object>
+                  <packing><property name="expand">False</property><property name="fill">True</property><property name="position">1</property></packing>
+                </child>
+
+                <child>
+                  <object class="GtkButton" id="btn_add">
+                    <property name="label" translatable="yes">➕ Ajouter</property>
+                    <property name="height-request">36</property>
+                    <signal name="clicked" handler="on_add_clicked" swapped="no"/>
+                  </object>
+                  <packing><property name="expand">False</property><property name="fill">True</property><property name="position">2</property></packing>
+                </child>
+
+              </object>
+            </child>
+          </object>
+          <packing><property name="expand">False</property><property name="fill">True</property><property name="position">1</property></packing>
+        </child>
+
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="spacing">6</property>
+
+            <child>
+              <object class="GtkRadioButton" id="filter_all">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">Toutes</property>
+                <property name="active">True</property>
+                <signal name="toggled" handler="on_filter_changed" swapped="no"/>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">0</property></packing>
+            </child>
+            <child>
+              <object class="GtkRadioButton" id="filter_active">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">Actives</property>
+                <property name="group">filter_all</property>
+                <signal name="toggled" handler="on_filter_changed" swapped="no"/>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">1</property></packing>
+            </child>
+            <child>
+              <object class="GtkRadioButton" id="filter_done">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">Terminées</property>
+                <property name="group">filter_all</property>
+                <signal name="toggled" handler="on_filter_changed" swapped="no"/>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">2</property></packing>
+            </child>
+
+            <child>
+              <object class="GtkBox">
+                <property name="visible">True</property>
+                <property name="spacing">4</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="visible">True</property>
+                    <property name="label" translatable="yes">Tri auto</property>
+                  </object>
+                  <packing><property name="expand">False</property><property name="fill">True</property><property name="position">0</property></packing>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="sort_switch">
+                    <property name="visible">True</property>
+                    <property name="active">False</property>
+                    <signal name="state-set" handler="on_sort_toggled" swapped="no"/>
+                  </object>
+                  <packing><property name="expand">False</property><property name="fill">True</property><property name="position">1</property></packing>
+                </child>
+              </object>
+              <packing><property name="expand">True</property><property name="fill">True</property><property name="position">3</property></packing>
+            </child>
+
+          </object>
+          <packing><property name="expand">False</property><property name="fill">True</property><property name="position">2</property></packing>
+        </child>
+
+        <child>
+          <object class="GtkSeparator">
+            <property name="visible">True</property>
+            <property name="orientation">horizontal</property>
+          </object>
+          <packing><property name="expand">False</property><property name="fill">True</property><property name="position">3</property></packing>
+        </child>
+
+        <child>
+          <object class="GtkFrame" id="list_frame">
+            <property name="visible">True</property>
+            <property name="label" translatable="yes">Liste</property>
+            <child>
+              <object class="GtkScrolledWindow">
+                <property name="visible">True</property>
+                <property name="height-request">320</property>
+                <child>
+                  <object class="GtkBox" id="task_list">
+                    <property name="visible">True</property>
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">4</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+          <packing><property name="expand">True</property><property name="fill">True</property><property name="position">4</property></packing>
+        </child>
+
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="spacing">6</property>
+
+            <child>
+              <object class="GtkButton" id="btn_mark_all">
+                <property name="label" translatable="yes">✓ Tout marquer</property>
+                <property name="height-request">36</property>
+                <signal name="clicked" handler="on_mark_all_clicked" swapped="no"/>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">0</property></packing>
+            </child>
+
+            <child>
+              <object class="GtkButton" id="btn_clear_done">
+                <property name="label" translatable="yes">🧹 Supprimer terminées</property>
+                <property name="height-request">36</property>
+                <signal name="clicked" handler="on_clear_done_clicked" swapped="no"/>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">1</property></packing>
+            </child>
+
+            <child>
+              <object class="GtkButton" id="btn_clear_all">
+                <property name="label" translatable="yes">🗑 Tout effacer</property>
+                <property name="height-request">36</property>
+                <signal name="clicked" handler="on_clear_all_clicked" swapped="no"/>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">2</property></packing>
+            </child>
+
+            <child>
+              <object class="GtkButton" id="btn_export">
+                <property name="label" translatable="yes">⬇ Exporter</property>
+                <property name="height-request">36</property>
+                <signal name="clicked" handler="on_export_clicked" swapped="no"/>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">3</property></packing>
+            </child>
+
+            <child>
+              <object class="GtkButton" id="btn_about">
+                <property name="label" translatable="yes">ℹ À propos</property>
+                <property name="height-request">36</property>
+                <signal name="clicked" handler="on_about_clicked" swapped="no"/>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">4</property></packing>
+            </child>
+
+          </object>
+          <packing><property name="expand">False</property><property name="fill">True</property><property name="position">5</property></packing>
+        </child>
+
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkLabel" id="status_label">
+                <property name="visible">True</property>
+                <property name="label" translatable="yes">Prêt.</property>
+                <property name="xalign">0</property>
+              </object>
+              <packing><property name="expand">True</property><property name="fill">True</property><property name="position">0</property></packing>
+            </child>
+            <child>
+              <object class="GtkProgressBar" id="progress">
+                <property name="visible">True</property>
+                <property name="fraction">0</property>
+                <property name="width-request">160</property>
+              </object>
+              <packing><property name="expand">False</property><property name="fill">True</property><property name="position">1</property></packing>
+            </child>
+          </object>
+          <packing><property name="expand">False</property><property name="fill">True</property><property name="position">6</property></packing>
+        </child>
+
+      </object>
+    </child>
+  </object>
+</interface>

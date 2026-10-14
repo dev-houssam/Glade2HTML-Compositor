@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Glade2HTML</title>
+<style>
+  :root {
+    --bg-app:   #1e1e1e;
+    --bg-panel: #2b2b2b;
+    --fg:       #e0e0e0;
+    --accent:   #3584e4;
+    --border:   #3d3d3d;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: var(--bg-app);
+    color: var(--fg);
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+  header {
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header .spacer { flex: 1; }
+  button, label.file-btn {
+    background: #3a3a3a;
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font: inherit;
+    cursor: pointer;
+  }
+  button:hover, label.file-btn:hover { background: #454545; }
+  button.primary { background: var(--accent); border-color: var(--accent); }
+  input[type=file] { display: none; }
+
+  main {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: 0;
+  }
+  #log {
+    background: #141414;
+    border-right: 1px solid var(--border);
+    padding: 12px;
+    overflow: auto;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  #log .info  { color: #9cdcfe; }
+  #log .warn  { color: #dcdcaa; }
+  #log .error { color: #f48771; }
+  #log .ok    { color: #6a9955; }
+
+  #preview {
+    background: #2e3436;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+    padding: 24px;
+  }
+  #render-frame {
+    border: none;
+    background: transparent;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-target {
+    outline: 2px dashed var(--accent);
+    outline-offset: -8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Glade2HTML</h1>
+  <label class="file-btn">
+    📁 Ouvrir un .glade
+    <input type="file" id="file-input" accept=".glade,.xml,application/xml,text/xml">
+  </label>
+  <button id="btn-demo">Charger un exemple</button>
+  <button id="btn-refresh" class="primary" disabled>↻ Re-render</button>
+  <div class="spacer"></div>
+  <span id="status" style="opacity:.7"></span>
+</header>
+
+<main>
+  <aside id="log"></aside>
+  <section id="preview">
+    <iframe id="render-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+  </section>
+</main>
+
+<script src="glade2html.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

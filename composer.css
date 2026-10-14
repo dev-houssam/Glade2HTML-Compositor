@@ -1,0 +1,635 @@
+/* =====================================================================
+ * composer.css — styles du compositeur CompoGlueML
+ * Version 0.6.0 — masquer barre de titre + redimensionnement
+ * ===================================================================== */
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 13px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+/* ============================== Toolbar ============================== */
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #252525;
+  border-bottom: 1px solid #333;
+  height: 48px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 10;
+}
+#toolbar h1 {
+  font-size: 14px;
+  margin: 0 12px 0 0;
+  font-weight: 600;
+  color: #fff;
+}
+#toolbar .spacer { flex: 1; }
+
+#toolbar button,
+#toolbar .btn-file {
+  background: #3a3a3a;
+  color: #e0e0e0;
+  border: 1px solid #4a4a4a;
+  border-radius: 5px;
+  padding: 6px 12px;
+  font: inherit;
+  cursor: pointer;
+  transition: background .1s;
+}
+#toolbar button:hover,
+#toolbar .btn-file:hover { background: #454545; }
+#toolbar button:disabled { opacity: .4; cursor: not-allowed; }
+#toolbar .btn-file input { display: none; }
+#toolbar button.active { background: #3584e4; border-color: #3584e4; color: #fff; }
+
+#status {
+  font-size: 12px;
+  color: #888;
+  padding: 0 8px;
+}
+
+/* ============================== Layout ============================== */
+#layout {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+  transition: height .2s;
+}
+body.inspector-open #layout {
+  height: calc(100vh - 48px - 340px);
+}
+
+/* ============================== Canevas ============================== */
+#stage-wrapper {
+  position: relative;
+  overflow: auto;
+  background:
+    repeating-linear-gradient(0deg, #1a1a1a 0px, #1a1a1a 19px, #202020 19px, #202020 20px),
+    repeating-linear-gradient(90deg, #1a1a1a 0px, #1a1a1a 19px, #202020 19px, #202020 20px);
+  background-size: 20px 20px;
+}
+
+#stage {
+  position: relative;
+  width: 3000px;
+  height: 2000px;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.stage-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #666;
+  pointer-events: none;
+  user-select: none;
+}
+.stage-hint p { margin: 4px 0; font-size: 14px; }
+.stage-hint .sub { font-size: 12px; color: #555; }
+.stage-hint code {
+  background: #2a2a2a; padding: 1px 5px; border-radius: 3px;
+  color: #9cdcfe; font-size: 12px;
+}
+
+/* ============================== Fenêtres placées ============================== */
+.comp-window {
+  position: absolute;
+  user-select: none;
+  cursor: default;
+}
+.comp-window.selected {
+  outline: 2px solid #3584e4;
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+.comp-window .gtk-titlebar {
+  cursor: move;
+  position: relative;
+}
+.comp-window .comp-close {
+  position: absolute;
+  right: 8px; top: 50%;
+  transform: translateY(-50%);
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #e01b24; color: #fff;
+  border: none; font-size: 12px; line-height: 1;
+  cursor: pointer; display: none; padding: 0;
+}
+.comp-window:hover .comp-close { display: block; }
+.comp-window .comp-close:hover { background: #ff2c35; }
+
+/* Bouton œil pour masquer la barre de titre */
+.comp-window .comp-hide-titlebar {
+  position: absolute;
+  right: 34px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #888;
+  color: #fff;
+  border: none;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  padding: 0;
+}
+.comp-window:hover .comp-hide-titlebar { display: block; }
+.comp-window .comp-hide-titlebar:hover { background: #555; }
+
+/* Bouton flottant pour ré-afficher la barre quand elle est cachée */
+.comp-window .comp-show-titlebar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(53,132,228,.85);
+  color: #fff;
+  border: none;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  padding: 0;
+  z-index: 10;
+}
+.comp-window.titlebar-hidden:hover .comp-show-titlebar { display: block; }
+.comp-window .comp-show-titlebar:hover { background: #3584e4; }
+
+/* Quand la barre est cachée */
+.comp-window.titlebar-hidden .gtk-titlebar {
+  display: none;
+}
+.comp-window.titlebar-hidden .gtk-window {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* En mode édition : les widgets internes ne réagissent pas aux clics */
+.comp-window .gtk-window { pointer-events: none; }
+.comp-window .gtk-titlebar,
+.comp-window .comp-close { pointer-events: auto; }
+
+/* En mode prévisualisation : les widgets redeviennent cliquables */
+body.preview-mode .comp-window .gtk-window { pointer-events: auto; }
+body.preview-mode .comp-window .gtk-titlebar { cursor: pointer; }
+
+/* Poignées de redimensionnement */
+.comp-window .comp-resize {
+  position: absolute;
+  z-index: 5;
+  background: transparent;
+}
+.comp-window .comp-resize.n  { top: -4px;    left: 6px;  right: 6px;  height: 8px;  cursor: n-resize; }
+.comp-window .comp-resize.s  { bottom: -4px; left: 6px;  right: 6px;  height: 8px;  cursor: s-resize; }
+.comp-window .comp-resize.w  { left: -4px;   top: 6px;   bottom: 6px; width: 8px;   cursor: w-resize; }
+.comp-window .comp-resize.e  { right: -4px;  top: 6px;   bottom: 6px; width: 8px;   cursor: e-resize; }
+.comp-window .comp-resize.nw { top: -4px;    left: -4px;   width: 12px; height: 12px; cursor: nw-resize; }
+.comp-window .comp-resize.ne { top: -4px;    right: -4px;  width: 12px; height: 12px; cursor: ne-resize; }
+.comp-window .comp-resize.sw { bottom: -4px; left: -4px;   width: 12px; height: 12px; cursor: sw-resize; }
+.comp-window .comp-resize.se { bottom: -4px; right: -4px;  width: 12px; height: 12px; cursor: se-resize; }
+
+/* Pas de redimensionnement en mode preview */
+body.preview-mode .comp-window .comp-resize { display: none; }
+
+/* ============================== Sidebar ============================== */
+#sidebar {
+  background: #202020;
+  border-left: 1px solid #333;
+  padding: 12px;
+  overflow: auto;
+  font-size: 12px;
+}
+#sidebar h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: #888;
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+#window-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+#window-list li {
+  padding: 6px 8px;
+  background: #2a2a2a;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background .1s;
+}
+#window-list li:hover { background: #333; }
+#window-list li.selected { background: #3584e4; color: #fff; }
+#window-list li .name {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#window-list li .badge {
+  background: rgba(255,255,255,.15);
+  padding: 1px 6px; border-radius: 10px; font-size: 10px;
+}
+#window-list li .signal-count {
+  font-size: 10px;
+  color: #888;
+  margin-left: 4px;
+}
+#window-list li.selected .signal-count { color: rgba(255,255,255,.7); }
+
+#sidebar .hint {
+  color: #777;
+  font-size: 11px;
+  line-height: 1.5;
+  border-top: 1px solid #333;
+  padding-top: 12px;
+}
+#sidebar .hint strong { color: #aaa; }
+
+/* ============================================================
+ * Sidebar — Panneau projet
+ * ============================================================ */
+#project-info {
+  background: #262626;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px solid #2e2e2e;
+  gap: 8px;
+}
+.info-row:last-of-type { border-bottom: none; }
+.info-row .label {
+  color: #888;
+  flex: 0 0 auto;
+}
+.info-row .value {
+  color: #dcdcaa;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  flex: 1 1 auto;
+}
+.btn-small {
+  width: 100%;
+  margin-top: 8px;
+  background: #333;
+  border: 1px solid #454545;
+  color: #ccc;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.btn-small:hover { background: #3d3d3d; }
+
+/* ============================== Inspecteur ============================== */
+#inspector {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 340px;
+  background: #1e1e1e;
+  border-top: 1px solid #3584e4;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  transition: transform .2s;
+  box-shadow: 0 -4px 16px rgba(0,0,0,.4);
+}
+#inspector.hidden {
+  transform: translateY(100%);
+}
+
+#inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: #252525;
+  border-bottom: 1px solid #333;
+  height: 40px;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+}
+.inspector-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.inspector-title .badge {
+  background: #3584e4;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.inspector-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #888;
+}
+#inspector-close {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+#inspector-close:hover {
+  background: #333;
+  color: #fff;
+}
+
+#inspector-body {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  overflow: hidden;
+}
+
+#signals-list {
+  background: #1a1a1a;
+  border-right: 1px solid #333;
+  overflow: auto;
+  padding: 8px;
+}
+.signal-item {
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-bottom: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 3px solid transparent;
+}
+.signal-item:hover { background: #2a2a2a; }
+.signal-item.active {
+  background: #3584e4;
+  border-left-color: #fff;
+  color: #fff;
+}
+.signal-item .handler {
+  font-weight: 600;
+  font-size: 12px;
+  color: #9cdcfe;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.signal-item.active .handler { color: #fff; }
+.signal-item .meta {
+  font-size: 10px;
+  color: #888;
+  display: flex;
+  gap: 6px;
+}
+.signal-item.active .meta { color: rgba(255,255,255,.75); }
+.signal-item .meta .gtk-sig {
+  background: rgba(255,255,255,.1);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+.signal-item.modified .handler::after {
+  content: " •";
+  color: #e5a00d;
+}
+.signal-item.active.modified .handler::after { color: #ffd666; }
+
+#editor-container {
+  flex: 1 1 auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #252525;
+  border-bottom: 1px solid #333;
+  font-size: 11px;
+  color: #888;
+  flex: 0 0 auto;
+}
+.editor-toolbar .widget-info {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editor-toolbar .widget-info strong {
+  color: #dcdcaa;
+}
+.editor-toolbar button {
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  color: #ccc;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.editor-toolbar button:hover { background: #454545; }
+.editor-toolbar button.danger { color: #f48771; }
+.editor-toolbar button.danger:hover { background: #4a2020; }
+
+.CodeMirror {
+  flex: 1 1 auto;
+  height: auto !important;
+  min-height: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+#no-selection {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 13px;
+}
+#inspector.has-selection #no-selection { display: none; }
+#inspector:not(.has-selection) #signals-list { display: none; }
+
+/* ============================== Drag ghost ============================== */
+.dragging {
+  opacity: .85;
+  box-shadow: 0 12px 32px rgba(0,0,0,.6);
+}
+
+/* ============================================================
+ * Modale métadonnées
+ * ============================================================ */
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: opacity .15s;
+}
+#modal-overlay.hidden {
+  display: none;
+}
+#modal {
+  background: #252525;
+  border: 1px solid #3d3d3d;
+  border-radius: 8px;
+  width: 480px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,.7);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #2a2a2a;
+  border-bottom: 1px solid #333;
+}
+.modal-header h2 {
+  font-size: 14px;
+  margin: 0;
+  font-weight: 600;
+  color: #fff;
+}
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.modal-close:hover { background: #333; color: #fff; }
+
+.modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field > span {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.field input,
+.field textarea {
+  background: #1a1a1a;
+  border: 1px solid #3d3d3d;
+  border-radius: 4px;
+  padding: 7px 10px;
+  color: #e0e0e0;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+}
+.field input:focus,
+.field textarea:focus {
+  border-color: #3584e4;
+}
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+.field-row .field { flex: 1; }
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #2a2a2a;
+  border-top: 1px solid #333;
+}
+.btn-primary,
+.btn-secondary {
+  border-radius: 5px;
+  padding: 7px 16px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid;
+}
+.btn-primary {
+  background: #3584e4;
+  border-color: #3584e4;
+  color: #fff;
+}
+.btn-primary:hover { background: #4a90e8; }
+.btn-secondary {
+  background: #333;
+  border-color: #454545;
+  color: #ccc;
+}
+.btn-secondary:hover { background: #3d3d3d; }
+
+/* ============================== Scrollbars ============================== */
+#stage-wrapper::-webkit-scrollbar,
+#sidebar::-webkit-scrollbar,
+#signals-list::-webkit-scrollbar { width: 10px; height: 10px; }
+#stage-wrapper::-webkit-scrollbar-thumb,
+#sidebar::-webkit-scrollbar-thumb,
+#signals-list::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 5px; }
+#stage-wrapper::-webkit-scrollbar-thumb:hover,
+#sidebar::-webkit-scrollbar-thumb:hover,
+#signals-list::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
