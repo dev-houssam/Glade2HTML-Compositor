@@ -1,0 +1,588 @@
+================================================================================
+COMPOGlueML — SPÉCIFICATION DE GÉNÉRATION POUR LLM
+Version du format : 1.0
+Encodage : UTF-8
+Rôle : produire un fichier .cgml.json valide à partir d'une description
+       fonctionnelle en langage naturel.
+================================================================================
+
+================================================================================
+1. RÔLE ATTENDU DU LLM
+================================================================================
+
+Le LLM reçoit :
+  - une description fonctionnelle d'une application (but, écrans, actions)
+  - éventuellement des contraintes de style ou d'ergonomie
+
+Le LLM produit :
+  - UN SEUL fichier JSON, au format CompoGlueML 1.0
+  - contenant : métadonnées, statistiques, une ou plusieurs fenêtres
+  - chaque fenêtre embarquant son XML Glade complet ET ses handlers JS
+  - le tout directement chargeable dans Composer (composer.html) via
+    le bouton "📂 Ouvrir projet", puis exportable en .cgml.html
+
+Aucune autre sortie n'est attendue : ni explication, ni commentaire,
+ni Markdown autour du JSON. Le JSON commence par "{" et finit par "}".
+
+================================================================================
+2. STRUCTURE RACINE DU FICHIER .cgml.json
+================================================================================
+
+{
+  "format": "CompoGlueML",
+  "formatVersion": "1.0",
+  "app": {
+    "name":        string,        // nom court, snake_case ou lisible
+    "description": string,        // 1 phrase
+    "version":     string,        // "0.1.0"
+    "author":      string,
+    "createdAt":   string,        // ISO 8601
+    "updatedAt":   string         // ISO 8601
+  },
+  "stats": {
+    "windowCount":  integer,
+    "handlerCount": integer,
+    "signalCount":  integer
+  },
+  "windows": [ Window, ... ]     // 1 à N fenêtres
+}
+
+-------------------------------------------------------------------------------
+2.1 Objet Window
+-------------------------------------------------------------------------------
+
+{
+  "id":               string,    // "w1", "w2", ... unique
+  "name":             string,    // nom logique du .glade, ex "main.glade"
+  "x":                integer,   // position en pixels sur le canevas
+  "y":                integer,
+  "z":                integer,   // ordre d'empilement, croissant
+  "width":            integer,   // largeur forcée de la fenêtre
+  "height":           integer,   // hauteur forcée de la fenêtre
+  "titlebarVisible":  boolean,   // false = pas de barre de titre
+  "xml":              string,    // XML Glade COMPLET, échappé en JSON
+  "handlers": {
+    "<handler_name>": {
+      "widgetId":  string,       // id Glade du widget émetteur
+      "gtkSignal": string,       // "clicked" | "changed" | "activate" |
+                                 // "toggled" | "state-set"
+      "code":      string,       // code JS complet de la fonction
+      "modified":  boolean       // true
+    },
+    ...
+  }
+}
+
+-------------------------------------------------------------------------------
+2.2 Règles impératives
+-------------------------------------------------------------------------------
+
+R1. "format" vaut exactement "CompoGlueML".
+R2. "formatVersion" vaut exactement "1.0".
+R3. Chaque Window possède un "id" unique, croissant : w1, w2, w3...
+R4. Chaque Window possède un "xml" Glade valide et complet.
+R5. Le XML doit commencer par <?xml version="1.0" encoding="UTF-8"?>.
+R6. Le XML doit contenir une unique racine <interface> avec
+    <requires lib="gtk+" version="3.24"/>.
+R7. Chaque <object class="GtkWindow"> possède un id unique.
+R8. Pour chaque <signal name="X" handler="Y"/> présent dans le XML,
+    il DOIT exister une entrée "Y" dans "handlers" avec "code" complet.
+R9. Le code des handlers est du JavaScript ES5 strictement valide
+    (pas de flèches, pas de let/const dans le code exporté — préférer var,
+    ou utiliser const/let : les deux fonctionnent côté navigateur, mais
+    ES5 évite tout risque de transpilation).
+R10. Chaque handler reçoit un paramètre unique "payload" et ne renvoie rien.
+R11. Les widgets ciblés dans les handlers doivent exister dans le XML
+     de la fenêtre correspondante ou d'une autre fenêtre du projet.
+R12. "stats.windowCount" = windows.length
+R13. "stats.handlerCount" = nombre de handlers UNIQUES (par nom) tous windows
+R14. "stats.signalCount" = somme des handlers déclarés par window
+     (les handlers identiques déclarés sur plusieurs widgets comptent une fois
+      par widget — c'est la somme brute).
+
+================================================================================
+3. API DISPONIBLE DANS LES HANDLERS
+================================================================================
+
+Variables globales accessibles dans tout handler :
+
+  Composer.widget(gladeId)
+      → retourne l'élément DOM du widget dont l'id Glade = gladeId
+      → cherche d'abord dans la fenêtre cliquée, puis dans toutes
+      → retourne null si introuvable
+
+  Composer.widgetIn(windowName, gladeId)
+      → retourne l'élément DOM du widget ciblé dans la fenêtre
+        identifiée par son "name" (ex: "traitement.glade")
+      → retourne null si la fenêtre ou le widget est absent
+
+  Composer.widgetsIn(windowName)
+      → retourne un objet { gladeId: element } pour la fenêtre donnée
+
+  Composer.setStatus(texte)
+      → compositeur : écrit dans la barre de statut
+      → export : écrit dans le titre de l'onglet
+
+  Composer.current()
+      → retourne le conteneur .cgml-window de la fenêtre cliquée
+
+Le paramètre "payload" contient :
+
+  payload.widgetId    string   id Glade du widget source
+  payload.gtkSignal   string   nom du signal GTK
+  payload.value       mixed    input.value / checkbox.checked
+  payload.element     Element  élément DOM source
+  payload.nativeEvent Event    événement DOM natif
+
+================================================================================
+4. WIDGETS GTK SUPPORTÉS (liste blanche stricte)
+================================================================================
+
+Conteneurs :
+  GtkWindow
+  GtkBox            (orientation: horizontal | vertical ; spacing)
+  GtkGrid           (via <packing><left-attach>/<top-attach>/<width>/<height>)
+  GtkFrame          (label en légende)
+  GtkScrolledWindow (height-request conseillé)
+  GtkNotebook
+  GtkStack          (rendu séquentiel)
+  GtkEventBox
+  GtkExpander       (expanded: True | False)
+
+Contrôles :
+  GtkButton
+  GtkToggleButton
+  GtkCheckButton
+  GtkRadioButton    (utiliser <property name="group">id_du_root</property>)
+  GtkSwitch
+  GtkLabel          (attributs Pango : scale, weight=bold)
+  GtkEntry          (editable, placeholder-text, xalign, activate)
+  GtkTextView
+  GtkComboBoxText   (via <items><item>Texte</item></items>)
+  GtkComboBox       (idem GtkComboBoxText)
+  GtkMenuButton
+  GtkProgressBar    (fraction 0..1)
+  GtkSeparator      (orientation)
+  GtkImage          (icon-name ou file)
+  GtkLinkButton
+  GtkSpinner
+
+Widgets NON supportés (à éviter absolument) :
+  GtkTreeView, GtkListStore, GtkMenuBar, GtkToolbar, GtkPaned,
+  GtkCalendar, GtkDrawingArea, GtkGLArea, GtkSourceView,
+  GtkFileChooser, GtkColorChooser, GtkFontChooser.
+
+================================================================================
+5. PROPRIÉTÉS XML UTILISABLES
+================================================================================
+
+Sur tout widget :
+  visible                 True | False
+  sensitive               True | False
+  can-focus               True | False
+  width-request           pixels
+  height-request          pixels
+  margin-start / margin-end / margin-top / margin-bottom   pixels
+
+Sur GtkBox :
+  orientation             horizontal | vertical
+  spacing                 pixels
+  homogeneous             True | False
+
+Sur GtkGrid :
+  column-spacing, row-spacing, column-homogeneous, row-homogeneous
+
+Sur GtkWindow :
+  title, default-width, default-height, resizable, window-position
+
+Sur GtkLabel :
+  label                   texte (peut contenir emojis)
+  xalign                  0 = gauche, 0.5 = centre, 1 = droite
+  use-markup              True | False
+  <attributes>
+      <attribute name="scale"  value="1.4"/>
+      <attribute name="weight" value="bold"/>
+  </attributes>
+
+Sur GtkEntry :
+  placeholder-text, xalign, editable, max-length
+
+Sur GtkProgressBar :
+  fraction                0 à 1
+
+Sur GtkExpander :
+  label, expanded         True | False
+
+Sur GtkRadioButton :
+  label, active, group    (group = id du GtkRadioButton racine)
+
+Sur GtkComboBoxText :
+  <items>
+      <item>Texte 1</item>
+      <item>Texte 2</item>
+  </items>
+
+Signaux XML autorisés :
+  <signal name="clicked"   handler="..." swapped="no"/>
+  <signal name="changed"   handler="..." swapped="no"/>
+  <signal name="activate"  handler="..." swapped="no"/>
+  <signal name="toggled"   handler="..." swapped="no"/>
+  <signal name="state-set" handler="..." swapped="no"/>
+
+================================================================================
+6. TEMPLATE — SQUELETTE D'UNE FENÊTRE
+================================================================================
+
+Structure type d'un Window à produire :
+
+{
+  "id": "w1",
+  "name": "main.glade",
+  "x": 40,
+  "y": 40,
+  "z": 1,
+  "width": 420,
+  "height": 520,
+  "titlebarVisible": true,
+  "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<interface>\n  <requires lib=\"gtk+\" version=\"3.24\"/>\n  <object class=\"GtkWindow\" id=\"main_window\">\n    <property name=\"title\">Mon application</property>\n    <property name=\"default-width\">420</property>\n    <property name=\"default-height\">520</property>\n    <child>\n      <object class=\"GtkBox\">\n        <property name=\"orientation\">vertical</property>\n        <property name=\"spacing\">10</property>\n        <property name=\"margin-start\">14</property>\n        <property name=\"margin-end\">14</property>\n        <property name=\"margin-top\">14</property>\n        <property name=\"margin-bottom\">14</property>\n        <child>\n          <object class=\"GtkLabel\">\n            <property name=\"label\">Bonjour</property>\n          </object>\n        </child>\n        <child>\n          <object class=\"GtkButton\" id=\"btn_ok\">\n            <property name=\"label\">OK</property>\n            <signal name=\"clicked\" handler=\"on_ok_clicked\" swapped=\"no\"/>\n          </object>\n        </child>\n      </object>\n    </child>\n  </object>\n</interface>",
+  "handlers": {
+    "on_ok_clicked": {
+      "widgetId": "btn_ok",
+      "gtkSignal": "clicked",
+      "code": "function on_ok_clicked(payload) {\n  Composer.setStatus('OK cliqué');\n}",
+      "modified": true
+    }
+  }
+}
+
+================================================================================
+7. TEMPLATE — HANDLER DE BASE
+================================================================================
+
+Chaque handler suit STRICTEMENT ce patron :
+
+function <handler_name>(payload) {
+  <corps>
+}
+
+Règles :
+  - Un seul paramètre : payload
+  - Aucun return (sauf early return pour garde)
+  - Toujours tester les widgets retournés avant usage
+  - Utiliser Composer.widget / Composer.widgetIn / Composer.setStatus
+  - Le style des lignes dynamiques est en inline via .style.cssText
+
+================================================================================
+8. BIBLIOTHÈQUE DE SNIPPETS DE HANDLERS
+================================================================================
+
+-------------------------------------------------------------------------------
+8.1 Ajouter une ligne dans une liste
+-------------------------------------------------------------------------------
+function on_add_clicked(payload) {
+  var input = Composer.widget('input_field');
+  var list  = Composer.widget('output_list');
+  if (!input || !list) return;
+  var v = input.value.trim();
+  if (!v) return;
+  var row = document.createElement('div');
+  row.style.cssText = 'padding:4px 8px;background:#f8f8f8;border-radius:4px;font-size:12px';
+  row.textContent = v;
+  list.appendChild(row);
+  input.value = '';
+  input.focus();
+}
+
+-------------------------------------------------------------------------------
+8.2 Vider une liste
+-------------------------------------------------------------------------------
+function on_clear_clicked(payload) {
+  var list = Composer.widget('output_list');
+  if (list) list.innerHTML = '';
+}
+
+-------------------------------------------------------------------------------
+8.3 Lire le radio coché
+-------------------------------------------------------------------------------
+function on_op_changed(payload) {
+  var ids = ['op_a', 'op_b', 'op_c'];
+  var current = '?';
+  for (var i = 0; i < ids.length; i++) {
+    var wrap = Composer.widget(ids[i]);
+    if (!wrap) continue;
+    var input = wrap.querySelector('input[type="radio"]');
+    if (input && input.checked) { current = ids[i]; break; }
+  }
+  Composer.setStatus('Choix : ' + current);
+}
+
+-------------------------------------------------------------------------------
+8.4 Lire le combo sélectionné
+-------------------------------------------------------------------------------
+function on_combo_changed(payload) {
+  var sel = Composer.widget('my_combo');
+  if (!sel) return;
+  Composer.setStatus('Valeur : ' + sel.value);
+}
+
+-------------------------------------------------------------------------------
+8.5 Transférer des données entre deux fenêtres
+-------------------------------------------------------------------------------
+function on_send_clicked(payload) {
+  var src = Composer.widget('source_list');
+  var dst = Composer.widgetIn('cible.glade', 'target_list');
+  if (!src || !dst) {
+    Composer.setStatus('Fenêtre cible absente');
+    return;
+  }
+  dst.innerHTML = '';
+  var rows = Array.prototype.slice.call(src.children);
+  for (var i = 0; i < rows.length; i++) {
+    var copy = rows[i].cloneNode(true);
+    dst.appendChild(copy);
+  }
+}
+
+-------------------------------------------------------------------------------
+8.6 Calcul (somme, moyenne, min, max)
+-------------------------------------------------------------------------------
+function on_compute_clicked(payload) {
+  var list = Composer.widget('data_list');
+  var result = Composer.widget('result_label');
+  if (!list || !result) return;
+  var values = [];
+  var rows = Array.prototype.slice.call(list.children);
+  for (var i = 0; i < rows.length; i++) {
+    var v = parseFloat(rows[i].dataset.value);
+    if (!isNaN(v)) values.push(v);
+  }
+  if (!values.length) { result.textContent = '—'; return; }
+  var sum = 0;
+  for (var j = 0; j < values.length; j++) sum += values[j];
+  var avg = sum / values.length;
+  result.textContent = 'Somme : ' + sum + ' — Moyenne : ' + avg.toFixed(2);
+}
+
+-------------------------------------------------------------------------------
+8.7 Afficher / masquer un panneau
+-------------------------------------------------------------------------------
+function on_toggle_clicked(payload) {
+  var panel = Composer.widget('side_panel');
+  if (!panel) return;
+  var hidden = panel.style.display === 'none';
+  panel.style.display = hidden ? '' : 'none';
+}
+
+-------------------------------------------------------------------------------
+8.8 Incrémenter un compteur
+-------------------------------------------------------------------------------
+function on_inc_clicked(payload) {
+  var lbl = Composer.widget('counter_label');
+  if (!lbl) return;
+  var n = parseInt(lbl.textContent, 10) || 0;
+  lbl.textContent = String(n + 1);
+}
+
+-------------------------------------------------------------------------------
+8.9 Horodatage dans un journal
+-------------------------------------------------------------------------------
+function on_log_clicked(payload) {
+  var box = Composer.widget('log_box');
+  if (!box) return;
+  var entry = document.createElement('div');
+  entry.style.cssText = 'font-size:11px;color:#666';
+  entry.textContent = '[' + new Date().toLocaleTimeString() + '] action';
+  box.appendChild(entry);
+  box.scrollTop = box.scrollHeight;
+}
+
+-------------------------------------------------------------------------------
+8.10 Confirmation simple
+-------------------------------------------------------------------------------
+function on_delete_clicked(payload) {
+  if (!confirm('Confirmer la suppression ?')) return;
+  var list = Composer.widget('items_list');
+  if (list) list.innerHTML = '';
+  Composer.setStatus('Supprimé');
+}
+
+================================================================================
+9. TYPES D'APPLICATIONS GÉNÉRABLES (exemples)
+================================================================================
+
+9.1  Formulaire de contact (nom, email, message, bouton envoyer)
+9.2  Todo list (ajouter, cocher, supprimer, filtrer)
+9.3  Convertisseur d'unités (valeur + combo source + combo cible + résultat)
+9.4  Calculatrice (boutons chiffres et opérateurs + écran)
+9.5  Pipeline acquisition → traitement (deux fenêtres liées)
+9.6  Générateur de mot de passe (longueur + options + résultat)
+9.7  Chronomètre (start, stop, reset, affichage)
+9.8  Compteur de clics (un ou plusieurs boutons + total)
+9.9  Mini-sudoku ou grille numérique (lecture de cases)
+9.10 Journal de bord (ajouter une entrée horodatée, vider)
+9.11 Tableau de bord (indicateurs + boutons de rafraîchissement)
+9.12 Assistant multi-étapes (3-4 fenêtres successives)
+9.13 Gestionnaire de stock (ajout produit, entrée/sortie, liste)
+9.14 Notes rapides (zone de texte + bouton sauvegarder en liste)
+9.15 Quiz à choix multiples (question + radios + vérifier)
+
+Pour chaque type, prévoir :
+  - 1 ou 2 fenêtres maximum
+  - 3 à 8 handlers
+  - des widgets simples (Box, Frame, Entry, Label, Button, Combo, Radio)
+
+================================================================================
+10. RÈGLES D'ERGONOMIE À RESPECTER
+================================================================================
+
+E1.  Chaque fenêtre a un titre clair avec un emoji en tête.
+E2.  Chaque fenêtre utilise une GtkBox verticale racine avec spacing 8-10.
+E3.  Marges extérieures : 14 px de chaque côté.
+E4.  Zones regroupées dans des GtkFrame avec label explicite.
+E5.  Boutons d'action en bas de fenêtre, hauteur 34-38 px.
+E6.  Labels de résultat en gros (attribut scale >= 1.4, weight = bold).
+E7.  Champs de saisie avec placeholder-text explicite.
+E8.  Listes dans un GtkScrolledWindow avec height-request 130-240 px.
+E9.  Un champ status en haut à droite (compteur ou état).
+E10. Aucun texte en anglais dans l'interface : tout en français.
+
+================================================================================
+11. CONTRAINTES STRICTES (à ne jamais violer)
+================================================================================
+
+N1.  Ne jamais générer de GtkTreeView, GtkMenuBar, GtkToolbar, GtkPaned.
+N2.  Ne jamais écrire de handler qui référence un widget inexistant.
+N3.  Ne jamais omettre le handler d'un <signal> présent dans le XML.
+N4.  Ne jamais produire de JSON avec des virgules finales.
+N5.  Ne jamais utiliser d'accolades simples dans les chaînes JSON : utiliser \" pour les guillemets internes.
+N6.  Ne jamais insérer de commentaire /* */ ou // dans le XML.
+N7.  Ne jamais nommer deux fenêtres avec le même "id".
+N8.  Ne jamais nommer deux handlers identiques DANS la même fenêtre.
+      (Un même handler peut être partagé entre widgets d'une même fenêtre,
+       comme on_op_changed sur plusieurs radios.)
+N9.  Ne jamais introduire de dépendance externe (jQuery, axios, etc.).
+N10. Ne jamais utiliser fetch / XMLHttpRequest : tout est local.
+N11. Ne jamais utiliser localStorage : l'export doit rester sandbox-safe.
+N12. Ne jamais écrire dans document.body : tout dans les widgets ciblés.
+
+================================================================================
+12. FORMAT DE SORTIE
+================================================================================
+
+Sortie attendue : un unique objet JSON, sans texte avant ni après.
+Encodage : ASCII strict dans le JSON lui-même, mais les chaînes
+peuvent contenir des caractères UTF-8 (emojis, accents).
+Le JSON doit être indenté avec 2 espaces et rester lisible.
+
+Exemple minimal attendu (une seule fenêtre) :
+
+{
+  "format": "CompoGlueML",
+  "formatVersion": "1.0",
+  "app": {
+    "name": "hello_app",
+    "description": "Démo minimale",
+    "version": "0.1.0",
+    "author": "LLM",
+    "createdAt": "2026-10-14T00:00:00.000Z",
+    "updatedAt": "2026-10-14T00:00:00.000Z"
+  },
+  "stats": { "windowCount": 1, "handlerCount": 1, "signalCount": 1 },
+  "windows": [
+    {
+      "id": "w1",
+      "name": "main.glade",
+      "x": 40, "y": 40, "z": 1,
+      "width": 360, "height": 220,
+      "titlebarVisible": true,
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<interface>\n  <requires lib=\"gtk+\" version=\"3.24\"/>\n  <object class=\"GtkWindow\" id=\"main_window\">\n    <property name=\"title\">Hello</property>\n    <property name=\"default-width\">360</property>\n    <property name=\"default-height\">220</property>\n    <child>\n      <object class=\"GtkBox\">\n        <property name=\"orientation\">vertical</property>\n        <property name=\"spacing\">10</property>\n        <property name=\"margin-start\">14</property>\n        <property name=\"margin-end\">14</property>\n        <property name=\"margin-top\">14</property>\n        <property name=\"margin-bottom\">14</property>\n        <child>\n          <object class=\"GtkButton\" id=\"btn_hello\">\n            <property name=\"label\">Cliquez</property>\n            <signal name=\"clicked\" handler=\"on_hello_clicked\" swapped=\"no\"/>\n          </object>\n        </child>\n      </object>\n    </child>\n  </object>\n</interface>",
+      "handlers": {
+        "on_hello_clicked": {
+          "widgetId": "btn_hello",
+          "gtkSignal": "clicked",
+          "code": "function on_hello_clicked(payload) {\n  Composer.setStatus('Bonjour');\n}",
+          "modified": true
+        }
+      }
+    }
+  ]
+}
+
+================================================================================
+13. EXEMPLE COMPLET — MINI TODO (2 fenêtres, 5 handlers)
+================================================================================
+
+{
+  "format": "CompoGlueML",
+  "formatVersion": "1.0",
+  "app": {
+    "name": "mini_todo",
+    "description": "Todo list simple avec statistiques",
+    "version": "0.1.0",
+    "author": "LLM",
+    "createdAt": "2026-10-14T00:00:00.000Z",
+    "updatedAt": "2026-10-14T00:00:00.000Z"
+  },
+  "stats": { "windowCount": 2, "handlerCount": 5, "signalCount": 5 },
+  "windows": [
+    {
+      "id": "w1",
+      "name": "todo.glade",
+      "x": 40, "y": 40, "z": 1,
+      "width": 380, "height": 460,
+      "titlebarVisible": true,
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<interface>\n  <requires lib=\"gtk+\" version=\"3.24\"/>\n  <object class=\"GtkWindow\" id=\"todo_window\">\n    <property name=\"title\">📝 Todo</property>\n    <property name=\"default-width\">380</property>\n    <property name=\"default-height\">460</property>\n    <child>\n      <object class=\"GtkBox\">\n        <property name=\"orientation\">vertical</property>\n        <property name=\"spacing\">10</property>\n        <property name=\"margin-start\">14</property>\n        <property name=\"margin-end\">14</property>\n        <property name=\"margin-top\">14</property>\n        <property name=\"margin-bottom\">14</property>\n        <child>\n          <object class=\"GtkLabel\">\n            <property name=\"label\">📝 Mes tâches</property>\n            <property name=\"xalign\">0</property>\n            <attributes><attribute name=\"scale\" value=\"1.4\"/><attribute name=\"weight\" value=\"bold\"/></attributes>\n          </object>\n        </child>\n        <child>\n          <object class=\"GtkFrame\">\n            <property name=\"label\">Nouvelle tâche</property>\n            <child>\n              <object class=\"GtkBox\">\n                <property name=\"spacing\">6</property>\n                <property name=\"margin-top\">6</property>\n                <property name=\"margin-bottom\">6</property>\n                <child>\n                  <object class=\"GtkEntry\" id=\"todo_input\">\n                    <property name=\"height-request\">34</property>\n                    <property name=\"placeholder-text\">Que devez-vous faire ?</property>\n                    <signal name=\"activate\" handler=\"on_add_task\" swapped=\"no\"/>\n                  </object>\n                  <packing><property name=\"expand\">True</property><property name=\"fill\">True</property><property name=\"position\">0</property></packing>\n                </child>\n                <child>\n                  <object class=\"GtkButton\" id=\"btn_add\">\n                    <property name=\"label\">➕ Ajouter</property>\n                    <signal name=\"clicked\" handler=\"on_add_task\" swapped=\"no\"/>\n                  </object>\n                  <packing><property name=\"position\">1</property></packing>\n                </child>\n              </object>\n            </child>\n          </object>\n        </child>\n        <child>\n          <object class=\"GtkFrame\">\n            <property name=\"label\">Liste</property>\n            <child>\n              <object class=\"GtkScrolledWindow\">\n                <property name=\"height-request\">240</property>\n                <child>\n                  <object class=\"GtkBox\" id=\"todo_list\">\n                    <property name=\"orientation\">vertical</property>\n                    <property name=\"spacing\">4</property>\n                  </object>\n                </child>\n              </object>\n            </child>\n          </object>\n          <packing><property name=\"expand\">True</property><property name=\"fill\">True</property><property name=\"position\">2</property></packing>\n        </child>\n        <child>\n          <object class=\"GtkButton\" id=\"btn_clear\">\n            <property name=\"label\">🧹 Tout effacer</property>\n            <signal name=\"clicked\" handler=\"on_clear_all\" swapped=\"no\"/>\n          </object>\n        </child>\n      </object>\n    </child>\n  </object>\n</interface>",
+      "handlers": {
+        "on_add_task": {
+          "widgetId": "btn_add",
+          "gtkSignal": "clicked",
+          "code": "function on_add_task(payload) {\n  var input = Composer.widget('todo_input');\n  var list  = Composer.widget('todo_list');\n  if (!input || !list) return;\n  var v = input.value.trim();\n  if (!v) return;\n  var row = document.createElement('div');\n  row.style.cssText = 'display:flex;gap:8px;padding:4px 8px;background:#f8f8f8;border-radius:4px;font-size:12px';\n  var cb = document.createElement('input');\n  cb.type = 'checkbox';\n  var lbl = document.createElement('span');\n  lbl.textContent = v;\n  lbl.style.flex = '1';\n  row.appendChild(cb);\n  row.appendChild(lbl);\n  list.appendChild(row);\n  input.value = '';\n  input.focus();\n  Composer.setStatus('Ajoutée : ' + v);\n}",
+          "modified": true
+        },
+        "on_clear_all": {
+          "widgetId": "btn_clear",
+          "gtkSignal": "clicked",
+          "code": "function on_clear_all(payload) {\n  var list = Composer.widget('todo_list');\n  if (list) list.innerHTML = '';\n  Composer.setStatus('Liste vidée');\n}",
+          "modified": true
+        }
+      }
+    },
+    {
+      "id": "w2",
+      "name": "stats.glade",
+      "x": 440, "y": 40, "z": 2,
+      "width": 320, "height": 260,
+      "titlebarVisible": false,
+      "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<interface>\n  <requires lib=\"gtk+\" version=\"3.24\"/>\n  <object class=\"GtkWindow\" id=\"stats_window\">\n    <property name=\"title\">📊 Statistiques</property>\n    <property name=\"default-width\">320</property>\n    <property name=\"default-height\">260</property>\n    <child>\n      <object class=\"GtkBox\">\n        <property name=\"orientation\">vertical</property>\n        <property name=\"spacing\">10</property>\n        <property name=\"margin-start\">14</property>\n        <property name=\"margin-end\">14</property>\n        <property name=\"margin-top\">14</property>\n        <property name=\"margin-bottom\">14</property>\n        <child>\n          <object class=\"GtkLabel\" id=\"stat_count\">\n            <property name=\"label\">0 tâche</property>\n            <property name=\"xalign\">0</property>\n            <attributes><attribute name=\"scale\" value=\"1.6\"/><attribute name=\"weight\" value=\"bold\"/></attributes>\n          </object>\n        </child>\n        <child>\n          <object class=\"GtkButton\" id=\"btn_count\">\n            <property name=\"label\">🔄 Rafraîchir</property>\n            <signal name=\"clicked\" handler=\"on_refresh_count\" swapped=\"no\"/>\n          </object>\n        </child>\n      </object>\n    </child>\n  </object>\n</interface>",
+      "handlers": {
+        "on_refresh_count": {
+          "widgetId": "btn_count",
+          "gtkSignal": "clicked",
+          "code": "function on_refresh_count(payload) {\n  var list = Composer.widgetIn('todo.glade', 'todo_list');\n  var lbl  = Composer.widget('stat_count');\n  if (!list || !lbl) return;\n  lbl.textContent = list.children.length + ' tâche';\n  Composer.setStatus('Compteur mis à jour');\n}",
+          "modified": true
+        }
+      }
+    }
+  ]
+}
+
+================================================================================
+14. CHECKLIST FINALE À VÉRIFIER AVANT DE RENDRE LE JSON
+================================================================================
+
+[ ] Le JSON est syntaxiquement valide (aucune virgule finale).
+[ ] format === "CompoGlueML" et formatVersion === "1.0".
+[ ] Toutes les fenêtres ont un id unique (w1, w2, ...).
+[ ] Chaque xml commence par <?xml version="1.0" encoding="UTF-8"?>.
+[ ] Chaque <signal> du XML a un handler correspondant.
+[ ] Chaque handler a les 4 champs : widgetId, gtkSignal, code, modified.
+[ ] Chaque widgetId référencé existe bien dans le XML de la fenêtre
+    OU d'une autre fenêtre du projet.
+[ ] Aucun widget de la liste noire (TreeView, MenuBar, Toolbar, Paned).
+[ ] Les stats correspondent au contenu.
+[ ] Aucune dépendance externe dans le code des handlers.
+[ ] Le résultat final est UNIQUEMENT le JSON, sans Markdown autour.
+
+================================================================================
+FIN DE SPÉCIFICATION
+================================================================================
