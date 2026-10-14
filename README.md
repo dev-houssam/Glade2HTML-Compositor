@@ -32,7 +32,7 @@ Documentation complète de CompoGlueML
 - [Structure du projet](#structure-du-projet)
 - [Limitations connues](#limitations-connues)
 - [Contribuer](#contribuer)
-- Propriétaire - Utilisez et indiquez le nom de l'auteur (Houssam BACAR
+- Propriétaire - Utilisez et indiquez le nom de l'auteur (Houssam BACAR)
 
 ---
 
