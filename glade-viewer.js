@@ -1,6 +1,6 @@
 /* =====================================================================
  * glade-viewer.js — couche d'intégration
- * Version 0.5.0 — ajout de attach() pour brancher sur du HTML déjà rendu
+ * Version 0.6.0 — signaux multiples (data-glade-signals), iframe liée directement
  * =====================================================================
  * API publique :
  *   GladeViewer.mountInline(container, xml, options)
@@ -77,34 +77,33 @@
    * dans le root donné. Retourne une fonction de nettoyage.
    */
   function bindHandlers(root, bus, options) {
-    const elements = root.querySelectorAll('[data-glade-handler]');
+    const elements = root.querySelectorAll('[data-glade-signals]');
     const bound = [];
 
     elements.forEach(function (el) {
-      const handlerName = el.dataset.gladeHandler;
-      if (!handlerName) return;
+      let specs;
+      try { specs = JSON.parse(el.getAttribute('data-glade-signals')); } catch (e) { return; }
+      const widgetId = el.getAttribute('data-glade-id') || '';
 
-      const gtkSignal = el.dataset.gladeSignal || 'click';
-      const domEvent = GTK_EVENT_MAP_LOCAL[gtkSignal] || 'click';
-      const widgetId = el.dataset.gladeId || '';
-
-      const listener = function (ev) {
-        const payload = {
-          widgetId: widgetId,
-          gtkSignal: gtkSignal,
-          value: extractValueLocal(el, domEvent),
-          element: el,
-          nativeEvent: ev
+      specs.forEach(function (spec) {
+        const listener = function (ev) {
+          if (spec.k && ev.key !== spec.k) return;
+          const payload = {
+            widgetId: widgetId,
+            gtkSignal: spec.s,
+            value: extractValueLocal(el, spec.e),
+            element: el,
+            nativeEvent: ev
+          };
+          const handled = bus.emit(spec.h, payload);
+          if (options && options.onSignal) options.onSignal(spec.h, payload);
+          if (!handled && options && options.strict) {
+            console.warn('[GladeViewer] Aucun handler pour "' + spec.h + '"');
+          }
         };
-        const handled = bus.emit(handlerName, payload);
-        if (options && options.onSignal) options.onSignal(handlerName, payload);
-        if (!handled && options && options.strict) {
-          console.warn('[GladeViewer] Aucun handler pour "' + handlerName + '"');
-        }
-      };
-
-      el.addEventListener(domEvent, listener);
-      bound.push({ el: el, event: domEvent, listener: listener });
+        el.addEventListener(spec.e, listener);
+        bound.push({ el: el, event: spec.e, listener: listener });
+      });
     });
 
     return function unbind() {
@@ -147,6 +146,7 @@
     });
 
     const unbind = bindHandlers(container, bus, options);
+    if (global.Glade2HTML && global.Glade2HTML.wireStatic) global.Glade2HTML.wireStatic(container);
 
     function addStyle(css) {
       const s = document.createElement('style');
@@ -239,6 +239,7 @@
     window.addEventListener('message', onMessage);
 
     let widgets = {};
+    let iframeUnbind = null;
     iframe.addEventListener('load', function () {
       const doc = iframe.contentDocument;
       if (!doc) return;
@@ -246,6 +247,8 @@
       doc.querySelectorAll('[data-glade-id]').forEach(function (el) {
         widgets[el.dataset.gladeId] = el;
       });
+      if (iframeUnbind) iframeUnbind();
+      iframeUnbind = bindHandlers(doc, bus, options);
       doc.addEventListener('click', function (ev) {
         const a = ev.target.closest('a');
         if (a) ev.preventDefault();

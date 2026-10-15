@@ -633,3 +633,90 @@ body.preview-mode .comp-window .comp-resize { display: none; }
 #stage-wrapper::-webkit-scrollbar-thumb:hover,
 #sidebar::-webkit-scrollbar-thumb:hover,
 #signals-list::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+
+/* =====================================================================
+ * v0.7 — console, dock (script / APIs), fenêtres masquées, lint
+ * ===================================================================== */
+.hidden { display: none !important; }
+.spacer { flex: 1; }
+
+/* Fenêtre « masquée au démarrage » : visible mais estompée en édition */
+body:not(.preview-mode) .comp-window.ghost .gtk-window { opacity: .45; outline: 2px dashed #888; outline-offset: -2px; }
+.comp-window .comp-ghost-btn {
+  position: absolute; right: 54px; top: 50%; transform: translateY(-50%);
+  width: 20px; height: 20px; border-radius: 50%; border: none; background: #444; color: #fff;
+  font-size: 11px; line-height: 1; cursor: pointer; display: none; padding: 0;
+}
+.comp-window:hover .comp-ghost-btn { display: block; }
+body.preview-mode .comp-window .comp-close,
+body.preview-mode .comp-window .comp-hide-titlebar,
+body.preview-mode .comp-window .comp-ghost-btn,
+body.preview-mode .comp-window .comp-show-titlebar { display: none !important; }
+body.preview-mode .comp-window.selected { outline: none; }
+/* onglets cliquables même en mode édition */
+.comp-window .gtk-notebook-tab { pointer-events: auto; }
+
+#window-list li .vis { cursor: pointer; opacity: .85; }
+#window-list li.is-hidden .name { opacity: .55; font-style: italic; }
+.signal-item.unsupported .gtk-sig { color: #f48771; text-decoration: line-through; }
+
+/* Éditeur */
+.editor-host { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.fallback-editor {
+  flex: 1; width: 100%; box-sizing: border-box; background: #282a36; color: #f8f8f2; border: none; resize: none;
+  font: 12px ui-monospace, Menlo, Consolas, monospace; padding: 8px; outline: none; tab-size: 2;
+}
+.lint-line { display: none; padding: 4px 10px; font-size: 11px; background: #4a2020; color: #ffb4a6; }
+.lint-line.on { display: block; }
+
+/* Console */
+#console {
+  position: fixed; right: 12px; bottom: 12px; width: 520px; height: 230px; z-index: 150;
+  background: #141414; border: 1px solid #3d3d3d; border-radius: 8px; display: flex; flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0,0,0,.6); overflow: hidden;
+}
+body.inspector-open #console { bottom: 352px; }
+#console header { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: #252525; border-bottom: 1px solid #333; font-size: 12px; }
+#console header button { background: transparent; border: none; color: #aaa; cursor: pointer; font-size: 13px; }
+#console header button:hover { color: #fff; }
+#console-body { flex: 1; overflow: auto; padding: 6px 8px; font: 11.5px/1.5 ui-monospace, Menlo, Consolas, monospace; }
+.cl { white-space: pre-wrap; word-break: break-word; }
+.cl-log { color: #c8c8c8; } .cl-warn { color: #e5c07b; } .cl-error { color: #f48771; } .cl-api { color: #7fd1f5; }
+
+/* Dock */
+#dock-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; z-index: 900; }
+.dock { background: #252525; border: 1px solid #3d3d3d; border-radius: 10px; width: min(980px, 94vw); height: min(720px, 90vh); display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.7); overflow: hidden; }
+.dock-head { display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-bottom: 1px solid #333; background: #202020; }
+.dock-tab { background: transparent; border: 1px solid transparent; color: #aaa; padding: 6px 12px; border-radius: 6px; cursor: pointer; font: inherit; }
+.dock-tab:hover { background: #2d2d2d; }
+.dock-tab.active { background: #3584e4; color: #fff; }
+.dock-body { flex: 1; overflow: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.dock-note { color: #999; font-size: 12px; margin: 0; line-height: 1.5; }
+.dock-note.small { font-size: 11px; }
+.dock-editor { flex: 1; min-height: 260px; display: flex; flex-direction: column; border: 1px solid #333; border-radius: 6px; overflow: hidden; }
+.dock-editor.small { flex: none; height: 180px; min-height: 0; }
+.dock-editor .CodeMirror { flex: 1; height: auto !important; }
+.dock-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.api-list { display: flex; flex-direction: column; gap: 12px; }
+.api-card { background: #1e1e1e; border: 1px solid #3a3a3a; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.api-top { display: flex; align-items: center; gap: 6px; }
+.api-top code { color: #9cdcfe; }
+.api-name { width: 160px; }
+.api-kind { font-size: 10px; background: #333; border-radius: 10px; padding: 2px 8px; color: #ccc; }
+.api-err { display: none; color: #ffb4a6; font-size: 11px; } .api-err.on { display: block; }
+.dgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.dfield { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #999; }
+.dfield.inline { flex-direction: row; align-items: center; gap: 8px; grid-column: 1 / -1; }
+.dock input[type=text], .dock select, .dock textarea {
+  background: #2a2a2a; border: 1px solid #444; color: #e0e0e0; border-radius: 5px; padding: 5px 7px; font: 12px system-ui; outline: none; box-sizing: border-box; width: 100%;
+}
+.dock textarea.bad { border-color: #f48771; }
+.dock input:focus, .dock select:focus, .dock textarea:focus { border-color: #3584e4; }
+.eps h4, .api-builtin h4 { margin: 4px 0 6px; font-size: 12px; color: #bbb; }
+.ep-row { display: grid; grid-template-columns: 110px 82px 1.3fr 1.3fr 110px auto auto; gap: 5px; margin-bottom: 5px; align-items: center; }
+.bi-row { display: flex; gap: 10px; font-size: 11px; color: #888; padding: 2px 0; }
+.bi-row code { color: #9cdcfe; min-width: 130px; }
+.help { margin: 0; color: #cfcfcf; font: 12px/1.6 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; }
+.btn-small.danger { color: #f48771; }
+.field.check { flex-direction: row; align-items: center; gap: 8px; }
+.field.check input { width: auto; }

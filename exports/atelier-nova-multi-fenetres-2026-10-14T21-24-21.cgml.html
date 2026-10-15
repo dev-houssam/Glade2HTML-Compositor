@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>atelier_nova_multi_fenetres</title>
+<style>
+/* === Styles du canevas exporté === */
+html, body { margin: 0; padding: 0; min-height: 100vh; background: #2e3436;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 13px; color: #e0e0e0; }
+#cgml-stage { position: relative; width: 100%; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+.cgml-window { position: absolute; }
+.cgml-window .gtk-window { box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.cgml-window.titlebar-hidden .gtk-titlebar { display: none; }
+.cgml-window.titlebar-hidden .gtk-window {
+  border-top-left-radius: 0; border-top-right-radius: 0;
+}
+
+/* === Styles GTK Adwaita === */
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 20px;
+      display: flex; align-items: flex-start; justify-content: center;
+      background: #2e3436;
+      font-family: "Cantarell", "Segoe UI", system-ui, sans-serif;
+      font-size: 14px;
+      color: #2e3436;
+    }
+
+    /* ============================================================
+     * Fenêtre GTK
+     * ============================================================ */
+    .gtk-window {
+      background: #fff;
+      border: 1px solid #d4d0c8;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+      display: inline-flex;
+      flex-direction: column;
+      max-width: 100%;
+      overflow: hidden;
+    }
+    .gtk-titlebar {
+      background: linear-gradient(#f8f7f6, #eae8e6);
+      border-bottom: 1px solid #d4d0c8;
+      padding: 8px 12px;
+      text-align: center;
+      font-weight: 600;
+      flex: 0 0 auto;
+    }
+    .gtk-window-body {
+      padding: 10px;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .gtk-window-body::-webkit-scrollbar { width: 8px; }
+    .gtk-window-body::-webkit-scrollbar-thumb {
+      background: #c8c4bf; border-radius: 4px;
+    }
+    .gtk-window-body::-webkit-scrollbar-track { background: transparent; }
+
+    /* ============================================================
+     * Layout
+     * ============================================================ */
+    .gtk-box { display: flex; }
+    .gtk-box.vertical   { flex-direction: column; }
+    .gtk-box.horizontal { flex-direction: row; }
+
+    /* === Enfants de GtkBox : comportement flex approprié === */
+    /* Les boutons, combos, checks, radios ne se compressent pas */
+    .gtk-box > .gtk-button,
+    .gtk-box > .gtk-combo,
+    .gtk-box > .gtk-check,
+    .gtk-box > .gtk-radio,
+    .gtk-box > .gtk-switch {
+      flex-shrink: 0;
+    }
+    /* Les entrées ont une largeur minimale garantie mais peuvent s'étendre */
+    .gtk-box > .gtk-entry,
+    .gtk-box > .gtk-textview {
+      min-width: 100px;
+      flex-grow: 1;
+      flex-shrink: 1;
+    }
+
+    /* ============================================================
+     * Boutons
+     * ============================================================ */
+    .gtk-button {
+      background: linear-gradient(#fdfdfc, #f0eeec);
+      border: 1px solid #cdc7c1;
+      border-radius: 5px;
+      padding: 4px 10px;
+      font: inherit;
+      cursor: pointer;
+      min-height: 30px;
+      color: inherit;
+      transition: background .1s;
+    }
+    .gtk-button:hover  { background: linear-gradient(#fff, #f6f5f4); }
+    .gtk-button:active { background: #dcd9d6; }
+    .gtk-button.disabled { opacity: .5; pointer-events: none; }
+
+    /* ============================================================
+     * Labels
+     * ============================================================ */
+    .gtk-label { display: inline-block; }
+
+    /* ============================================================
+     * Entrées / TextArea
+     * ============================================================ */
+    .gtk-entry, .gtk-textview {
+      background: #fff;
+      border: 1px solid #c0bdb8;
+      border-radius: 5px;
+      padding: 6px 10px;
+      font: inherit;
+      outline: none;
+      min-height: 30px;
+      color: #2e3436;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .gtk-entry:focus, .gtk-textview:focus {
+      border-color: #3584e4;
+      box-shadow: 0 0 0 2px rgba(53,132,228,.25);
+    }
+    .gtk-entry[readonly] { background: #fafafa; }
+
+    /* ============================================================
+     * Combos
+     * ============================================================ */
+    .gtk-combo {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-color: #fff;
+      background-image:
+        linear-gradient(45deg, transparent 50%, #666 50%),
+        linear-gradient(135deg, #666 50%, transparent 50%),
+        linear-gradient(to right, #d4d0c8, #d4d0c8);
+      background-position:
+        calc(100% - 14px) 50%,
+        calc(100% - 9px)  50%,
+        calc(100% - 28px) 50%;
+      background-size:
+        5px 5px,
+        5px 5px,
+        1px 60%;
+      background-repeat: no-repeat;
+      border: 1px solid #c0bdb8;
+      border-radius: 5px;
+      padding: 6px 32px 6px 10px;
+      font: inherit;
+      color: #2e3436;
+      cursor: pointer;
+      outline: none;
+      min-height: 30px;
+      min-width: 100px;
+      width: auto;
+    }
+    .gtk-combo:hover  { background-color: #f8f8f8; }
+    .gtk-combo:focus  {
+      border-color: #3584e4;
+      box-shadow: 0 0 0 2px rgba(53,132,228,.25);
+    }
+    .gtk-combo option {
+      background: #fff;
+      color: #2e3436;
+      padding: 4px;
+    }
+
+    /* ============================================================
+     * Check / Radio / Switch — reset + style custom
+     * ============================================================ */
+    .gtk-check input[type="checkbox"],
+    .gtk-radio input[type="radio"],
+    .gtk-switch input[type="checkbox"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      padding: 0;
+      border: 1px solid #b8b4ae;
+      background: #fff;
+      cursor: pointer;
+      flex: 0 0 auto;
+      position: relative;
+      transition: background .1s, border-color .1s;
+      vertical-align: middle;
+    }
+    .gtk-check input[type="checkbox"],
+    .gtk-switch input[type="checkbox"] { border-radius: 3px; }
+    .gtk-radio input[type="radio"]     { border-radius: 50%; }
+
+    .gtk-check input[type="checkbox"]:hover,
+    .gtk-radio input[type="radio"]:hover,
+    .gtk-switch input[type="checkbox"]:hover {
+      border-color: #8a8a8a;
+      background: #fafafa;
+    }
+
+    .gtk-check input[type="checkbox"]:checked,
+    .gtk-switch input[type="checkbox"]:checked {
+      background: #3584e4;
+      border-color: #3584e4;
+    }
+    .gtk-check input[type="checkbox"]:checked::after,
+    .gtk-switch input[type="checkbox"]:checked::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 5px;
+      height: 9px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .gtk-radio input[type="radio"]:checked {
+      background: #3584e4;
+      border-color: #3584e4;
+    }
+    .gtk-radio input[type="radio"]:checked::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .gtk-check, .gtk-radio, .gtk-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 3px 0;
+      font-size: 13px;
+      user-select: none;
+    }
+    .gtk-check span, .gtk-radio span { line-height: 1.2; }
+
+    /* ============================================================
+     * Frame
+     * ============================================================ */
+    .gtk-frame {
+      border: 1px solid #cdc7c1;
+      border-radius: 6px;
+      padding: 12px 14px 14px;
+      margin: 4px 0;
+      min-width: 0;
+    }
+    .gtk-frame > legend {
+      padding: 0 8px;
+      font-weight: 600;
+      font-size: 12px;
+      color: #4a4a4a;
+      margin-left: 4px;
+    }
+
+    /* ============================================================
+     * Notebook
+     * ============================================================ */
+    .gtk-notebook-tabs {
+      display: flex;
+      border-bottom: 1px solid #cdc7c1;
+      flex: 0 0 auto;
+    }
+    .gtk-notebook-tab {
+      background: transparent;
+      border: none;
+      padding: 6px 14px;
+      cursor: pointer;
+      font: inherit;
+      border-bottom: 2px solid transparent;
+      color: #666;
+    }
+    .gtk-notebook-tab.active {
+      border-color: #3584e4;
+      color: #3584e4;
+    }
+    .gtk-notebook-panes { flex: 1 1 auto; overflow: auto; }
+    .gtk-notebook-pane { display: none; padding: 10px; }
+    .gtk-notebook-pane.active { display: block; }
+
+    /* ============================================================
+     * Séparateur
+     * ============================================================ */
+    .gtk-separator.horizontal { height: 1px; background: #d4d0c8; margin: 6px 0; }
+    .gtk-separator.vertical   { width: 1px; background: #d4d0c8; margin: 0 6px; }
+
+    /* ============================================================
+     * Barre de progression
+     * ============================================================ */
+    .gtk-progress {
+      background: #e0ddd8;
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+      min-width: 100px;
+    }
+    .gtk-progress-fill {
+      height: 100%;
+      background: #3584e4;
+      transition: width .2s;
+    }
+
+    /* ============================================================
+     * Expander
+     * ============================================================ */
+    .gtk-expander > summary {
+      cursor: pointer;
+      padding: 4px 0;
+      font-weight: 600;
+      font-size: 12px;
+      color: #555;
+      list-style: none;
+    }
+    .gtk-expander > summary::-webkit-details-marker { display: none; }
+    .gtk-expander > summary::before {
+      content: "▸";
+      display: inline-block;
+      width: 14px;
+      transition: transform .15s;
+    }
+    .gtk-expander[open] > summary::before { transform: rotate(90deg); }
+
+    /* ============================================================
+     * ScrolledWindow
+     * ============================================================ */
+    .gtk-scrolled {
+      overflow: auto;
+      max-height: 400px;
+    }
+    .gtk-scrolled > .gtk-box { min-height: 0; }
+
+    /* ============================================================
+     * Grid
+     * ============================================================ */
+    .gtk-grid { display: grid; }
+
+    /* ============================================================
+     * Widgets non supportés
+     * ============================================================ */
+    .gtk-unsupported {
+      border: 1px dashed #d75a4a;
+      color: #d75a4a;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    /* ============================================================
+     * Icônes (fallback)
+     * ============================================================ */
+    .gtk-icon { font-style: italic; color: #7a7a7a; }
+  
+</style>
+</head>
+<body>
+<div id="cgml-stage">
+    <div class="cgml-window" data-window-id="w1" data-glade-name="nova_dashboard.glade" style="left:0px; top:0px; z-index:20; width:900px; height:680px;">
+      
+<div class="gtk-window" style="width: 900px; height: 680px;"><div class="gtk-titlebar">Atelier Nova — Tableau de bord</div><div class="gtk-window-body"><div class="gtk-box vertical" style="gap: 10px; padding: 14px 16px;" data-glade-id="main_root"><div class="gtk-box horizontal" style="gap: 8px; padding: 0px;" data-glade-id="main_header"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; font-size: 21px; font-weight: bold; flex: 1 1 0px;" data-glade-id="main_title">🚀 ATELIER NOVA</span><span class="gtk-label" style="text-align: right; display: inline-block; width: 100%;" data-glade-id="global_status">Tous les systèmes sont prêts</span></div><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%;" data-glade-id="main_intro">Un petit centre de pilotage pour organiser des projets, suivre les ressources et garder une trace des décisions.</span><div class="gtk-grid" style="display: grid; gap: 10px; padding: 0px;" data-glade-id="stats_grid"><fieldset class="gtk-frame" data-glade-id="projects_card" style="grid-area: 1 / 1 / span 1 / span 1;"><legend>Projets actifs</legend><span class="gtk-label" style="font-size: 28px; font-weight: bold;" data-glade-id="project_count">0</span></fieldset><fieldset class="gtk-frame" data-glade-id="tasks_card" style="grid-area: 1 / 2 / span 1 / span 1;"><legend>Tâches ouvertes</legend><span class="gtk-label" style="font-size: 28px; font-weight: bold;" data-glade-id="task_count">0</span></fieldset><fieldset class="gtk-frame" data-glade-id="notes_card" style="grid-area: 1 / 3 / span 1 / span 1;"><legend>Notes enregistrées</legend><span class="gtk-label" style="font-size: 28px; font-weight: bold;" data-glade-id="note_count">0</span></fieldset></div><fieldset class="gtk-frame" data-glade-id="quick_actions_frame"><legend>Accès rapide</legend><div class="gtk-box vertical" style="gap: 8px; padding: 10px;" data-glade-id="quick_actions"><button class="gtk-button" style="min-height: 40px;" data-glade-handler="on_open_projects" data-glade-signal="clicked" data-glade-id="open_projects_button">📁 Ouvrir le gestionnaire de projets</button><button class="gtk-button" style="min-height: 40px;" data-glade-handler="on_open_tasks" data-glade-signal="clicked" data-glade-id="open_tasks_button">✅ Ouvrir le tableau des tâches</button><button class="gtk-button" style="min-height: 40px;" data-glade-handler="on_open_notes" data-glade-signal="clicked" data-glade-id="open_notes_button">📝 Ouvrir le carnet de notes</button><button class="gtk-button" style="min-height: 40px;" data-glade-handler="on_open_reports" data-glade-signal="clicked" data-glade-id="open_reports_button">📊 Ouvrir les rapports</button><button class="gtk-button" style="min-height: 40px;" data-glade-handler="on_open_settings" data-glade-signal="clicked" data-glade-id="open_settings_button">⚙️ Ouvrir les paramètres</button></div></fieldset><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%;" data-glade-id="main_footer">Atelier Nova · Prototype multi-fenêtres · Données conservées pendant la session</span></div></div></div>
+
+
+    </div>
+    <div class="cgml-window" data-window-id="w2" data-glade-name="nova_projets.glade" style="left:1537px; top:542px; z-index:36; width:698px; height:580px;">
+      
+<div class="gtk-window" style="width: 698px; height: 580px;"><div class="gtk-titlebar">Atelier Nova — Projets</div><div class="gtk-window-body"><div class="gtk-box vertical" style="gap: 9px; padding: 14px;" data-glade-id="projects_root"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; font-size: 19.6px; font-weight: bold;" data-glade-id="projects_heading">📁 Gestionnaire de projets</span><div class="gtk-box horizontal" style="gap: 7px; padding: 0px;" data-glade-id="project_entry_row"><input class="gtk-entry" type="text" placeholder="Nom du projet à créer…" style="min-height: 35px; flex: 1 1 0px;" data-glade-handler="on_add_project" data-glade-signal="activate" data-glade-id="project_input"><button class="gtk-button" data-glade-handler="on_add_project" data-glade-signal="clicked" data-glade-id="add_project_button">➕ Créer</button></div><div class="gtk-scrolled" style="max-height: 300px; min-height: 300px;" data-glade-id="projects_scroll"><div class="gtk-box vertical" style="gap: 6px; padding: 5px;" data-glade-id="projects_list"></div></div><button class="gtk-button" style="min-height: 36px;" data-glade-handler="on_back_dashboard" data-glade-signal="clicked" data-glade-id="close_projects_button">↩ Retour au tableau de bord</button></div></div></div>
+
+
+    </div>
+    <div class="cgml-window" data-window-id="w3" data-glade-name="nova_taches.glade" style="left:904px; top:502px; z-index:35; width:620px; height:600px;">
+      
+<div class="gtk-window" style="width: 620px; height: 600px;"><div class="gtk-titlebar">Atelier Nova — Tâches</div><div class="gtk-window-body"><div class="gtk-box vertical" style="gap: 9px; padding: 14px;" data-glade-id="tasks_root"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; font-size: 19.6px; font-weight: bold;" data-glade-id="tasks_heading">✅ Tableau des tâches</span><div class="gtk-box horizontal" style="gap: 7px; padding: 0px;" data-glade-id="task_entry_row"><input class="gtk-entry" type="text" placeholder="Décris une tâche à accomplir…" style="min-height: 35px; flex: 1 1 0px;" data-glade-handler="on_add_task" data-glade-signal="activate" data-glade-id="task_input"><button class="gtk-button" data-glade-handler="on_add_task" data-glade-signal="clicked" data-glade-id="add_task_button">➕ Ajouter</button></div><div class="gtk-scrolled" style="max-height: 320px; min-height: 320px;" data-glade-id="tasks_scroll"><div class="gtk-box vertical" style="gap: 6px; padding: 5px;" data-glade-id="tasks_list"></div></div><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%;" data-glade-id="task_summary">0 terminée · 0 restante</span><button class="gtk-button" style="min-height: 36px;" data-glade-handler="on_back_dashboard" data-glade-signal="clicked" data-glade-id="back_tasks_button">↩ Retour au tableau de bord</button></div></div></div>
+
+
+    </div>
+    <div class="cgml-window" data-window-id="w4" data-glade-name="nova_notes.glade" style="left:0px; top:700px; z-index:32; width:885px; height:620px;">
+      
+<div class="gtk-window" style="width: 885px; height: 620px;"><div class="gtk-titlebar">Atelier Nova — Carnet de notes</div><div class="gtk-window-body"><div class="gtk-box vertical" style="gap: 9px; padding: 14px;" data-glade-id="notes_root"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; font-size: 19.6px; font-weight: bold;" data-glade-id="notes_heading">📝 Carnet de notes</span><input class="gtk-entry" type="text" placeholder="Titre de la note…" style="min-height: 35px;" data-glade-id="note_title_input"><textarea class="gtk-textview" style="min-height: 130px;" data-glade-id="note_body_input"></textarea><button class="gtk-button" style="min-height: 38px;" data-glade-handler="on_save_note" data-glade-signal="clicked" data-glade-id="save_note_button">💾 Enregistrer la note</button><div class="gtk-scrolled" style="max-height: 230px; min-height: 230px;" data-glade-id="notes_scroll"><div class="gtk-box vertical" style="gap: 6px; padding: 5px;" data-glade-id="notes_list"></div></div><button class="gtk-button" style="min-height: 36px;" data-glade-handler="on_back_dashboard" data-glade-signal="clicked" data-glade-id="back_notes_button">↩ Retour au tableau de bord</button></div></div></div>
+
+
+    </div>
+    <div class="cgml-window" data-window-id="w5" data-glade-name="nova_rapports.glade" style="left:1545px; top:0px; z-index:31; width:680px; height:520px;">
+      
+<div class="gtk-window" style="width: 680px; height: 520px;"><div class="gtk-titlebar">Atelier Nova — Rapports</div><div class="gtk-window-body"><div class="gtk-box vertical" style="gap: 10px; padding: 16px;" data-glade-id="reports_root"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; font-size: 19.6px; font-weight: bold;" data-glade-id="reports_heading">📊 Rapports &amp; bilan</span><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%;" data-glade-id="reports_intro">Cette fenêtre est le point de départ d'un tableau de bord analytique. Génère un rapport de démonstration ou exporte-le en texte.</span><textarea class="gtk-textview" style="min-height: 260px;" data-glade-id="report_output"></textarea><button class="gtk-button" style="min-height: 38px;" data-glade-handler="on_generate_report" data-glade-signal="clicked" data-glade-id="generate_report_button">✨ Générer un rapport</button><button class="gtk-button" style="min-height: 36px;" data-glade-handler="on_copy_report" data-glade-signal="clicked" data-glade-id="export_report_button">📋 Préparer un résumé à copier</button><button class="gtk-button" style="min-height: 36px;" data-glade-handler="on_back_dashboard" data-glade-signal="clicked" data-glade-id="back_reports_button">↩ Retour au tableau de bord</button></div></div></div>
+
+
+    </div>
+    <div class="cgml-window" data-window-id="w6" data-glade-name="nova_parametres.glade" style="left:902px; top:0px; z-index:29; width:620px; height:500px;">
+      
+<div class="gtk-window" style="width: 620px; height: 500px;"><div class="gtk-titlebar">Atelier Nova — Paramètres</div><div class="gtk-window-body"><div class="gtk-box vertical" style="gap: 10px; padding: 16px;" data-glade-id="settings_root"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%; font-size: 19.6px; font-weight: bold;" data-glade-id="settings_heading">⚙️ Paramètres de l'atelier</span><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%;" data-glade-id="settings_intro">Personnalise le nom de l'espace et le message d'accueil du tableau de bord.</span><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%;" data-glade-id="workspace_label">Nom de l'espace de travail</span><input class="gtk-entry" type="text" style="min-height: 36px;" data-glade-id="workspace_input"><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%;" data-glade-id="welcome_label">Message d'accueil</span><input class="gtk-entry" type="text" style="min-height: 36px;" data-glade-id="welcome_input"><button class="gtk-button" style="min-height: 38px;" data-glade-handler="on_save_settings" data-glade-signal="clicked" data-glade-id="save_settings_button">💾 Appliquer les paramètres</button><span class="gtk-label" style="text-align: left; display: inline-block; width: 100%;" data-glade-id="settings_feedback">Les modifications seront appliquées au tableau de bord lorsque tu y retourneras.</span><button class="gtk-button" style="min-height: 36px;" data-glade-handler="on_back_dashboard" data-glade-signal="clicked" data-glade-id="back_settings_button">↩ Retour au tableau de bord</button></div></div></div>
+
+
+    </div>
+</div>
+
+<script>
+/* ==================================================================
+ * atelier_nova_multi_fenetres
+ * Centre de pilotage multi-fenêtres pour projets, tâches, notes, rapports et paramètres.
+ * Version : 1.0.0
+ * Auteur  : lol
+ * Exporté : 2026-10-14T21:24:21.242Z
+ * 6 fenêtre(s), 12 handler(s)
+ * ================================================================== */
+window.__cgmlAttach = function (root, handlers, options) {
+  options = options || {};
+  var GTK_EVENT = { clicked:"click", toggled:"change", changed:"input",
+    activate:"click", "state-set":"change", value_changed:"input" };
+  function extractValue(el, evt) {
+    var t = el.tagName.toLowerCase();
+    if (t === "input" || t === "textarea" || t === "select") {
+      if (el.type === "checkbox" || el.type === "radio") return el.checked;
+      return el.value;
+    }
+    return evt === "click" ? true : undefined;
+  }
+  var widgets = {};
+  root.querySelectorAll("[data-glade-id]").forEach(function (el) {
+    widgets[el.dataset.gladeId] = el;
+  });
+  var bound = [];
+  root.querySelectorAll("[data-glade-handler]").forEach(function (el) {
+    var h = el.dataset.gladeHandler;
+    var gtkSig = el.dataset.gladeSignal || "click";
+    var domEvt = GTK_EVENT[gtkSig] || "click";
+    var listener = function (ev) {
+      var win = el.closest(".cgml-window");
+      if (win) window.__lastClickedWindow = win;
+      var payload = {
+        widgetId: el.dataset.gladeId || "",
+        gtkSignal: gtkSig,
+        value: extractValue(el, domEvt),
+        element: el,
+        nativeEvent: ev
+      };
+      var fn = handlers[h];
+      if (typeof fn === "function") {
+        try { fn(payload); } catch (e) { console.error("[cgml] " + h + " :", e); }
+      }
+      if (options.onSignal) options.onSignal(h, payload);
+    };
+    el.addEventListener(domEvt, listener);
+    bound.push({ el: el, evt: domEvt, fn: listener });
+  });
+  return {
+    widgets: widgets,
+    getWidget: function (id) { return widgets[id] || null; },
+    destroy: function () { bound.forEach(function(b){ b.el.removeEventListener(b.evt, b.fn); }); }
+  };
+};
+
+var handlers = {
+  on_open_projects: (function(){
+    try {
+      function on_open_projects(payload) {
+  Composer.openWindow('w2');
+  var status = Composer.widget('global_status');
+  if (status) status.textContent = 'Ouverture du gestionnaire de projets';
+}
+      return on_open_projects;
+    } catch (e) {
+      console.error("Handler on_open_projects :", e);
+      return function(){};
+    }
+  })(),
+  on_open_tasks: (function(){
+    try {
+      function on_open_tasks(payload) {
+  Composer.openWindow('w3');
+  var status = Composer.widget('global_status');
+  if (status) status.textContent = 'Ouverture du tableau des tâches';
+}
+      return on_open_tasks;
+    } catch (e) {
+      console.error("Handler on_open_tasks :", e);
+      return function(){};
+    }
+  })(),
+  on_open_notes: (function(){
+    try {
+      function on_open_notes(payload) {
+  Composer.openWindow('w4');
+  var status = Composer.widget('global_status');
+  if (status) status.textContent = 'Ouverture du carnet de notes';
+}
+      return on_open_notes;
+    } catch (e) {
+      console.error("Handler on_open_notes :", e);
+      return function(){};
+    }
+  })(),
+  on_open_reports: (function(){
+    try {
+      function on_open_reports(payload) {
+  Composer.openWindow('w5');
+  var status = Composer.widget('global_status');
+  if (status) status.textContent = 'Ouverture des rapports';
+}
+      return on_open_reports;
+    } catch (e) {
+      console.error("Handler on_open_reports :", e);
+      return function(){};
+    }
+  })(),
+  on_open_settings: (function(){
+    try {
+      function on_open_settings(payload) {
+  Composer.openWindow('w6');
+  var status = Composer.widget('global_status');
+  if (status) status.textContent = 'Ouverture des paramètres';
+}
+      return on_open_settings;
+    } catch (e) {
+      console.error("Handler on_open_settings :", e);
+      return function(){};
+    }
+  })(),
+  on_add_project: (function(){
+    try {
+      function on_add_project(payload) {
+ var input=Composer.widget('project_input'), list=Composer.widget('projects_list');
+ if(!input||!list)return;
+ var name=String(input.value||'').trim();
+ if(!name){Composer.setStatus('Donne un nom au projet');return;}
+ var row=document.createElement('div');
+ row.style.cssText='padding:10px;border:1px solid #d7dfeb;border-left:4px solid #6687bf;border-radius:6px;background:#f5f8fc';
+ var title=document.createElement('strong'); title.textContent='📁 '+name;
+ var meta=document.createElement('div'); meta.style.cssText='font-size:11px;color:#68778b;margin-top:4px'; meta.textContent='Créé le '+new Date().toLocaleString();
+ var del=document.createElement('button'); del.textContent='Supprimer'; del.style.cssText='margin-top:6px;cursor:pointer';
+ del.addEventListener('click',function(){if(row.parentNode)row.parentNode.removeChild(row);Composer.setStatus('Projet supprimé');});
+ row.appendChild(title);row.appendChild(meta);row.appendChild(del);list.appendChild(row);
+ input.value='';input.focus();Composer.setStatus('Projet créé : '+name);
+}
+      return on_add_project;
+    } catch (e) {
+      console.error("Handler on_add_project :", e);
+      return function(){};
+    }
+  })(),
+  on_back_dashboard: (function(){
+    try {
+      function on_back_dashboard(payload) { Composer.openWindow('w1'); }
+      return on_back_dashboard;
+    } catch (e) {
+      console.error("Handler on_back_dashboard :", e);
+      return function(){};
+    }
+  })(),
+  on_add_task: (function(){
+    try {
+      function on_add_task(payload) {
+ var input=Composer.widget('task_input'), list=Composer.widget('tasks_list');
+ if(!input||!list)return;
+ var value=String(input.value||'').trim();
+ if(!value){Composer.setStatus('Décris une tâche avant de l’ajouter');return;}
+ var row=document.createElement('div');
+ row.style.cssText='display:flex;align-items:center;gap:8px;padding:9px;background:#f4f8f3;border-left:4px solid #77a17b;border-radius:6px';
+ var cb=document.createElement('input');cb.type='checkbox';
+ var label=document.createElement('span');label.textContent=value;label.style.flex='1';
+ var del=document.createElement('button');del.textContent='×';del.title='Supprimer la tâche';
+ function update(){label.style.textDecoration=cb.checked?'line-through':'none';label.style.color=cb.checked?'#7b827d':'#202720';var done=0;for(var i=0;i<list.children.length;i++){var c=list.children[i].querySelector('input[type=checkbox]');if(c&&c.checked)done++;}var s=Composer.widget('task_summary');if(s)s.textContent=done+' terminée(s) · '+(list.children.length-done)+' restante(s)';}
+ cb.addEventListener('change',update);del.addEventListener('click',function(){if(row.parentNode)row.parentNode.removeChild(row);update();});
+ row.appendChild(cb);row.appendChild(label);row.appendChild(del);list.appendChild(row);input.value='';input.focus();update();Composer.setStatus('Tâche ajoutée');
+}
+      return on_add_task;
+    } catch (e) {
+      console.error("Handler on_add_task :", e);
+      return function(){};
+    }
+  })(),
+  on_save_note: (function(){
+    try {
+      function on_save_note(payload) {
+ var titleInput=Composer.widget('note_title_input'), bodyWidget=Composer.widget('note_body_input'), list=Composer.widget('notes_list');
+ if(!titleInput||!bodyWidget||!list)return;
+ var title=String(titleInput.value||'').trim();
+ var body='';
+ try { var range=bodyWidget.get_buffer().get_bounds(); body=bodyWidget.get_buffer().get_text(range[0],range[1],true); } catch(e) { body=String(bodyWidget.value||''); }
+ body=String(body||'').trim();
+ if(!title&&!body){Composer.setStatus('Écris un titre ou un contenu avant d’enregistrer');return;}
+ if(!title)title='Note sans titre';
+ var card=document.createElement('div');card.style.cssText='padding:10px;background:#fff9e9;border:1px solid #eadba9;border-left:4px solid #d1ae50;border-radius:6px';
+ var h=document.createElement('strong');h.textContent=title;
+ var p=document.createElement('div');p.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;margin-top:5px';p.textContent=body;
+ var meta=document.createElement('div');meta.style.cssText='font-size:10px;color:#80765a;margin-top:7px';meta.textContent='Enregistrée le '+new Date().toLocaleString();
+ var del=document.createElement('button');del.textContent='Supprimer';del.style.marginTop='6px';del.addEventListener('click',function(){if(card.parentNode)card.parentNode.removeChild(card);Composer.setStatus('Note supprimée');});
+ card.appendChild(h);card.appendChild(p);card.appendChild(meta);card.appendChild(del);list.insertBefore(card,list.firstChild);
+ titleInput.value='';try{bodyWidget.get_buffer().set_text('');}catch(e){bodyWidget.value='';}
+ Composer.setStatus('Note enregistrée');
+}
+      return on_save_note;
+    } catch (e) {
+      console.error("Handler on_save_note :", e);
+      return function(){};
+    }
+  })(),
+  on_generate_report: (function(){
+    try {
+      function on_generate_report(payload) {
+ var out=Composer.widget('report_output');if(!out)return;
+ var report='ATELIER NOVA — RAPPORT DE SESSION\nGénéré le : '+new Date().toLocaleString()+'\n\nCe rapport est une démonstration autonome.\n\nBilan :\n• Projets créés : consulte le gestionnaire de projets.\n• Tâches : consulte le tableau des tâches.\n• Notes : consulte le carnet de notes.\n\nProchaine étape suggérée : choisir une priorité et la découper en tâches concrètes.\n\nFin du rapport.';
+ try { var b=out.get_buffer();b.set_text(report); } catch(e) { out.value=report; }
+ Composer.setStatus('Rapport généré');
+}
+      return on_generate_report;
+    } catch (e) {
+      console.error("Handler on_generate_report :", e);
+      return function(){};
+    }
+  })(),
+  on_copy_report: (function(){
+    try {
+      function on_copy_report(payload) {
+ var out=Composer.widget('report_output');if(!out)return;
+ var value='';
+ try {var b=out.get_buffer();var r=b.get_bounds();value=b.get_text(r[0],r[1],true);}catch(e){value=String(out.value||'');}
+ if(!value.trim()){Composer.setStatus('Génère d’abord un rapport');return;}
+ try { var ta=document.createElement('textarea');ta.value=value;document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');document.body.removeChild(ta);Composer.setStatus(ok?'Résumé copié dans le presse-papiers':'Résumé prêt : sélectionne le texte pour le copier'); }
+ catch(e){Composer.setStatus('Résumé prêt à copier');}
+}
+      return on_copy_report;
+    } catch (e) {
+      console.error("Handler on_copy_report :", e);
+      return function(){};
+    }
+  })(),
+  on_save_settings: (function(){
+    try {
+      function on_save_settings(payload) {
+ var name=Composer.widget('workspace_input'), welcome=Composer.widget('welcome_input'), title=Composer.widget('main_title'), status=Composer.widget('global_status'), feedback=Composer.widget('settings_feedback');
+ var workspace=String(name&&name.value||'').trim(), message=String(welcome&&welcome.value||'').trim();
+ if(!workspace){Composer.setStatus('Le nom de l’espace ne peut pas être vide');return;}
+ if(title)title.textContent='🚀 '+workspace.toUpperCase();
+ if(status)status.textContent=message||'Espace prêt';
+ if(feedback)feedback.textContent='Paramètres appliqués : '+workspace+'.';
+ Composer.setStatus('Paramètres appliqués');
+}
+      return on_save_settings;
+    } catch (e) {
+      console.error("Handler on_save_settings :", e);
+      return function(){};
+    }
+  })()
+};
+
+(function(){
+  var __views = [];
+  var __winsByName = {};
+  var __winsById = {};
+  document.querySelectorAll(".cgml-window").forEach(function(el){
+    __winsByName[el.dataset.gladeName] = el;
+    __winsById[el.dataset.windowId] = el;
+  });
+  window.__lastClickedWindow = null;
+  window.Composer = {
+    current: function(){
+      if (window.__lastClickedWindow) {
+        var wid = window.__lastClickedWindow.dataset.windowId;
+        if (wid && __winsById[wid]) return __winsById[wid];
+      }
+      var keys = Object.keys(__winsById);
+      return keys.length ? __winsById[keys[0]] : null;
+    },
+    widget: function(gladeId){
+      if (window.__lastClickedWindow) {
+        var el = window.__lastClickedWindow.querySelector('[data-glade-id="' + gladeId + '"]');
+        if (el) return el;
+      }
+      var keys = Object.keys(__winsById);
+      for (var i = keys.length - 1; i >= 0; i--) {
+        var w = __winsById[keys[i]];
+        var el2 = w.querySelector('[data-glade-id="' + gladeId + '"]');
+        if (el2) return el2;
+      }
+      return null;
+    },
+    widgetIn: function(gladeName, gladeId){
+      var w = __winsByName[gladeName];
+      if (!w) return null;
+      return w.querySelector('[data-glade-id="' + gladeId + '"]');
+    },
+    widgetsIn: function(gladeName){
+      var w = __winsByName[gladeName];
+      if (!w) return {};
+      var out = {};
+      w.querySelectorAll("[data-glade-id]").forEach(function(el){
+        out[el.dataset.gladeId] = el;
+      });
+      return out;
+    },
+    setStatus: function(t){ document.title = "CompoGlueML — " + t; },
+    allWindows: function(){ return __winsById; }
+  };
+  document.querySelectorAll(".cgml-window").forEach(function(el){
+    var view = window.__cgmlAttach(el, handlers, {
+      onSignal: function(name, payload){
+        console.log("[cgml]", name, payload && payload.widgetId);
+      }
+    });
+    __views.push(view);
+  });
+  console.log("[cgml] " + __views.length + " fenêtre(s), " + Object.keys(handlers).length + " handler(s).");
+})();
+</script>
+</body>
+</html>

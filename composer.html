@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
 <link rel="stylesheet" href="composer.css">
 </head>
 <body>
@@ -20,13 +21,17 @@
     <input type="file" id="file-input" accept=".glade,.xml" multiple>
   </label>
 
-  <label class="btn-file" title="Ouvrir un projet .cgml.json">
+  <label class="btn-file" title="Ouvrir un projet .cgml.json ou un export .cgml.html">
     📂 Ouvrir projet
-    <input type="file" id="project-input" accept=".cgml.json,application/json">
+    <input type="file" id="project-input" accept=".json,.html,application/json,text/html">
   </label>
 
   <button id="btn-clear" title="Tout effacer">🗑 Vider</button>
-  <button id="btn-preview" title="Activer la prévisualisation des handlers">▶ Tester</button>
+  <button id="btn-preview" title="Lance l'application avec le runtime exporté">▶ Tester</button>
+  <button id="btn-reload" class="hidden" title="Relancer l'aperçu (état remis à zéro)">↻</button>
+  <button id="btn-script" title="Script commun : variables et fonctions partagées">📜 Script</button>
+  <button id="btn-apis" title="APIs locales, intégrées ou externes">🔌 APIs</button>
+  <button id="btn-console" title="Journal : handlers, APIs, erreurs">🧾 Console</button>
   <button id="btn-save-project" title="Sauvegarder le projet en .cgml.json">💾 Projet</button>
   <button id="btn-export" title="Exporter en .cgml.html" disabled>📤 Export HTML</button>
 
@@ -113,6 +118,10 @@
           <input type="text" id="meta-author" placeholder="Votre nom">
         </label>
       </div>
+      <label class="field check">
+        <input type="checkbox" id="meta-draggable">
+        <span>Fenêtres déplaçables (par la barre de titre) dans l'application exportée</span>
+      </label>
     </div>
     <footer class="modal-footer">
       <button id="modal-cancel" class="btn-secondary">Annuler</button>
@@ -121,14 +130,30 @@
   </div>
 </div>
 
+<!-- ============================== Console ============================== -->
+<section id="console" class="hidden">
+  <header>
+    <strong>Console</strong>
+    <span class="spacer"></span>
+    <button id="console-clear" title="Effacer">⌫</button>
+    <button id="console-close" title="Fermer">✕</button>
+  </header>
+  <div id="console-body"></div>
+</section>
+
+<!-- ============================== Script commun / APIs ============================== -->
+<div id="dock-overlay" class="hidden"></div>
+
 <!-- ============================== Dépendances ============================== -->
 <script src="glade2html.js"></script>
 <script src="glade-viewer.js"></script>
+<script src="cgml-runtime.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
 
 <script src="composer.js"></script>
 

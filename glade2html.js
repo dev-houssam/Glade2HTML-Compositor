@@ -1,6 +1,6 @@
 /* =====================================================================
  * Glade2HTML — moteur de rendu générique
- * Version 0.5.1 — correction largeur des inputs + combos + radios
+ * Version 0.6.0 — signaux multiples par widget, onglets Glade corrects, états initiaux sérialisés
  * =====================================================================
  */
 (function (global) {
@@ -206,35 +206,39 @@
       nb.appendChild(tabs);
       nb.appendChild(panes);
 
-      let first = true;
-      for (const c of children(node)) {
-        const labelNode = c.child.querySelector(':scope > object[class="GtkLabel"]');
-        const tabName = labelNode ? prop(labelNode, 'label', 'Onglet') : 'Onglet';
+      // Association onglet ↔ page.
+      //  - vrai Glade : <child type="tab"> qui suit chaque page
+      //  - fichiers générés : un GtkLabel (sans type) précède chaque page
+      const kids = children(node);
+      const pages = [];
+      const hasTabType = kids.some(function (k) { return k.type === 'tab'; });
+      if (hasTabType) {
+        kids.forEach(function (k) {
+          if (k.type === 'tab') { if (pages.length) pages[pages.length - 1].tab = k.object; }
+          else pages.push({ tab: null, page: k.object });
+        });
+      } else if (kids.length >= 2 && kids.length % 2 === 0 &&
+                 kids.every(function (k, i) { return i % 2 === 1 || k.object.getAttribute('class') === 'GtkLabel'; })) {
+        for (let i = 0; i < kids.length; i += 2) pages.push({ tab: kids[i].object, page: kids[i + 1].object });
+      } else {
+        kids.forEach(function (k) { pages.push({ tab: null, page: k.object }); });
+      }
 
+      pages.forEach(function (p, i) {
         const tab = el('button', 'gtk-notebook-tab');
-        tab.textContent = tabName;
+        tab.type = 'button';
+        tab.setAttribute('data-page', String(i));
+        tab.textContent = p.tab ? (prop(p.tab, 'label', 'Page ' + (i + 1))) : 'Page ' + (i + 1);
+        if (p.tab && p.tab.getAttribute('id')) tab.setAttribute('data-glade-id', p.tab.getAttribute('id'));
         tabs.appendChild(tab);
 
         const pane = el('div', 'gtk-notebook-pane');
-        const inner = c.object.querySelector(':scope > child > object');
-        if (inner) pane.appendChild(ctx.renderChild(inner));
+        pane.setAttribute('data-page', String(i));
+        pane.appendChild(ctx.renderChild(p.page));
         panes.appendChild(pane);
 
-        (function (tab, pane) {
-          tab.addEventListener('click', function () {
-            Array.prototype.forEach.call(tabs.children, function (t) { t.classList.remove('active'); });
-            Array.prototype.forEach.call(panes.children, function (p) { p.classList.remove('active'); });
-            tab.classList.add('active');
-            pane.classList.add('active');
-          });
-        })(tab, pane);
-
-        if (first) {
-          tab.classList.add('active');
-          pane.classList.add('active');
-          first = false;
-        }
-      }
+        if (i === 0) { tab.classList.add('active'); pane.classList.add('active'); }
+      });
       return nb;
     },
 
@@ -273,7 +277,7 @@
       const wrap = el('label', 'gtk-check');
       const cb = el('input');
       cb.type = 'checkbox';
-      if (bool(prop(node, 'active'))) cb.checked = true;
+      if (bool(prop(node, 'active'))) cb.setAttribute('checked', '');
       const txt = el('span');
       txt.textContent = prop(node, 'label', '');
       wrap.appendChild(cb);
@@ -290,7 +294,7 @@
       const groupName = id && ctx.radioGroups ? ctx.radioGroups[id] : null;
       if (groupName) r.name = groupName;
 
-      if (bool(prop(node, 'active'))) r.checked = true;
+      if (bool(prop(node, 'active'))) r.setAttribute('checked', '');
 
       const txt = el('span');
       txt.textContent = prop(node, 'label', '');
@@ -303,7 +307,7 @@
       const wrap = el('label', 'gtk-switch');
       const cb = el('input');
       cb.type = 'checkbox';
-      if (bool(prop(node, 'active'))) cb.checked = true;
+      if (bool(prop(node, 'active'))) cb.setAttribute('checked', '');
       wrap.appendChild(cb);
       return wrap;
     },
@@ -334,6 +338,8 @@
       input.type = 'text';
       if (prop(node, 'editable') === 'False') input.readOnly = true;
       if (prop(node, 'placeholder-text')) input.placeholder = prop(node, 'placeholder-text');
+      if (prop(node, 'text')) input.setAttribute('value', prop(node, 'text'));
+      if (prop(node, 'visibility') === 'False') input.type = 'password';
       if (prop(node, 'xalign') === '0') input.style.textAlign = 'left';
       if (prop(node, 'xalign') === '1') input.style.textAlign = 'right';
       applyWidgetSize(input, node);
@@ -369,6 +375,9 @@
         sel.appendChild(opt);
       }
 
+      const act = parseInt(prop(node, 'active', '0'), 10);
+      const opts = sel.querySelectorAll('option');
+      if (act >= 0 && opts[act]) opts[act].setAttribute('selected', '');
       applyWidgetSize(sel, node);
       return sel;
     },
@@ -511,79 +520,80 @@
    * 6. RENDU RÉCURSIF
    * ------------------------------------------------------------------ */
 
+  /** Traduit un signal GTK en événement DOM selon la classe du widget. */
+  function signalSpec(cls, name) {
+    const n = String(name || '').replace(/_/g, '-');
+    switch (n) {
+      case 'clicked': case 'pressed': return { e: 'click' };
+      case 'activate':
+        if (/Entry|SpinButton/.test(cls)) return { e: 'keydown', k: 'Enter' };
+        if (cls === 'GtkExpander') return { e: 'toggle' };
+        return { e: 'click' };
+      case 'toggled': case 'state-set': case 'notify::active':
+        return { e: cls === 'GtkToggleButton' ? 'click' : 'change' };
+      case 'changed':
+        return { e: /^GtkComboBox/.test(cls) ? 'change' : 'input' };
+      case 'value-changed': return { e: 'input' };
+      case 'switch-page': return { e: 'g2h-switch-page' };
+      case 'notify::expanded': return { e: 'toggle' };
+      case 'button-press-event': return { e: 'mousedown' };
+      case 'button-release-event': return { e: 'mouseup' };
+      case 'key-press-event': return { e: 'keydown' };
+      case 'key-release-event': return { e: 'keyup' };
+      case 'focus-in-event': return { e: 'focus' };
+      case 'focus-out-event': return { e: 'blur' };
+      case 'enter-notify-event': return { e: 'mouseenter' };
+      case 'leave-notify-event': return { e: 'mouseleave' };
+      case 'row-activated': return { e: 'dblclick' };
+    }
+    return null;
+  }
+
   function renderObject(node, ctx) {
     const cls = node.getAttribute('class');
     const renderer = RENDERERS[cls];
+    let rendered;
 
     if (!renderer) {
       ctx.warnings.push('Widget non supporté : ' + cls);
-      const box = el('div', 'gtk-unsupported');
-      box.textContent = '⚠ ' + cls;
-      box.title = 'Widget GTK non pris en charge';
+      rendered = el('div', 'gtk-unsupported');
+      rendered.textContent = '⚠ ' + cls;
+      rendered.title = 'Widget GTK non pris en charge';
       for (const c of children(node)) {
-        box.appendChild(ctx.renderChild(c.object));
+        rendered.appendChild(ctx.renderChild(c.object));
       }
-      return box;
+    } else {
+      rendered = renderer(node, ctx);
+      if (!rendered) return null;
+      applyWidgetSize(rendered, node);
     }
-
-    const rendered = renderer(node, ctx);
-    if (!rendered) return null;
-
-    applyWidgetSize(rendered, node);
 
     const id = node.getAttribute('id') || '';
+    if (id) rendered.setAttribute('data-glade-id', id);
 
-    const collected = rendered.__gladeSignals || [];
-    delete rendered.__gladeSignals;
-
-    const fromXml = [];
-    const signalNodes = node.querySelectorAll(':scope > signal');
-    for (const s of signalNodes) {
+    // Tous les <signal> du widget, sérialisés dans UN attribut JSON.
+    // (L'ancienne version n'en gardait qu'un par élément.)
+    const specs = [];
+    for (const s of node.querySelectorAll(':scope > signal')) {
       const h = s.getAttribute('handler');
       if (!h) continue;
-      fromXml.push({
-        domEvent: GTK_EVENT_MAP[s.getAttribute('name')] || 'click',
-        handlerName: h,
-        gtkSignal: s.getAttribute('name')
-      });
-    }
-
-    const allSignals = collected.concat(fromXml);
-    const seen = {};
-
-    for (const sig of allSignals) {
-      const key = sig.domEvent + '|' + sig.handlerName;
-      if (seen[key]) continue;
-      seen[key] = true;
-
-      rendered.setAttribute('data-glade-handler', sig.handlerName);
-      rendered.setAttribute('data-glade-signal', sig.gtkSignal || sig.domEvent);
-
-      (function (sig, rendered, id) {
-        rendered.addEventListener(sig.domEvent, function (ev) {
-          const detail = {
-            handler: sig.handlerName,
-            widgetId: id,
-            gtkSignal: sig.gtkSignal || sig.domEvent,
-            value: extractValue(rendered, sig.domEvent),
-            nativeEvent: ev
-          };
-          const custom = new CustomEvent('glade-signal', {
-            detail: detail,
-            bubbles: true,
-            cancelable: true
-          });
-          rendered.dispatchEvent(custom);
-        });
-      })(sig, rendered, id);
-
+      const gtkName = s.getAttribute('name');
+      const sp = signalSpec(cls, gtkName);
       ctx.signals.push({
-        handlerName: sig.handlerName,
+        handlerName: h,
         widgetId: id,
-        gtkSignal: sig.gtkSignal || sig.domEvent
+        widgetClass: cls,
+        gtkSignal: gtkName,
+        event: sp ? sp.e : null,
+        key: sp && sp.k ? sp.k : null
       });
+      if (sp) specs.push({ s: gtkName, h: h, e: sp.e, k: sp.k || undefined });
     }
-
+    if (specs.length) {
+      rendered.setAttribute('data-glade-signals', JSON.stringify(specs));
+      rendered.setAttribute('data-glade-handler', specs[0].h);   // compat ancienne API
+      rendered.setAttribute('data-glade-signal', specs[0].s);
+    }
     return rendered;
   }
 
@@ -944,6 +954,37 @@
    * 8. FONCTION PRINCIPALE
    * ------------------------------------------------------------------ */
 
+  /** Comportements purs-DOM que le HTML sérialisé ne peut pas porter. */
+  function wireStatic(root) {
+    if (!root || root.__g2hWired) return;
+    root.__g2hWired = true;
+    root.addEventListener('click', function (ev) {
+      const tab = ev.target.closest && ev.target.closest('.gtk-notebook-tab');
+      if (tab) {
+        const nb = tab.closest('.gtk-notebook');
+        const idx = tab.getAttribute('data-page');
+        nb.querySelectorAll(':scope > .gtk-notebook-tabs > .gtk-notebook-tab, :scope > .gtk-notebook-panes > .gtk-notebook-pane')
+          .forEach(function (n) { n.classList.toggle('active', n.getAttribute('data-page') === idx); });
+        nb.dispatchEvent(new CustomEvent('g2h-switch-page', { detail: { page: +idx } }));
+      }
+      const tg = ev.target.closest && ev.target.closest('.gtk-toggle');
+      if (tg) tg.classList.toggle('active');
+    }, true);
+  }
+  const WIRE_SCRIPT = '(' + function () {
+    document.addEventListener('click', function (ev) {
+      var tab = ev.target.closest && ev.target.closest('.gtk-notebook-tab');
+      if (tab) {
+        var nb = tab.closest('.gtk-notebook'), idx = tab.getAttribute('data-page');
+        nb.querySelectorAll('.gtk-notebook-tab, .gtk-notebook-pane').forEach(function (n) {
+          n.classList.toggle('active', n.getAttribute('data-page') === idx);
+        });
+      }
+      var tg = ev.target.closest && ev.target.closest('.gtk-toggle');
+      if (tg) tg.classList.toggle('active');
+    }, true);
+  } + ')();';
+
   function gladeToHtml(gladeXml) {
     if (typeof gladeXml !== 'string' || !gladeXml.trim()) {
       throw new Error("Entrée vide : fournissez le contenu d'un fichier .glade");
@@ -976,6 +1017,7 @@
       if (id) rootIds.push(id);
     }
 
+    const fragment = staging.body.innerHTML;
     const html = '<!DOCTYPE html>\n' +
       '<html>\n' +
       '<head>\n' +
@@ -983,12 +1025,15 @@
       '<style>' + GTK_CSS + '</style>\n' +
       '</head>\n' +
       '<body>\n' +
-      staging.body.innerHTML + '\n' +
+      fragment + '\n' +
+      '<scr' + 'ipt>' + WIRE_SCRIPT + '<\/scr' + 'ipt>\n' +
       '</body>\n' +
       '</html>';
 
     return {
       html: html,
+      fragment: fragment,
+      css: GTK_CSS,
       warnings: ctx.warnings,
       rootIds: rootIds,
       signals: ctx.signals
@@ -1001,9 +1046,10 @@
 
   const api = {
     gladeToHtml: gladeToHtml,
+    wireStatic: wireStatic,
     RENDERERS: RENDERERS,
     registerRenderer: function (cls, fn) { RENDERERS[cls] = fn; },
-    version: '0.5.1'
+    version: '0.6.0'
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Gestionnaire de tâches — Glade2HTML</title>
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #1e1e1e;
+    color: #eee;
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+    justify-content: center;
+    padding: 8px;
+    box-sizing: border-box;
+  }
+
+  #glade-host {
+    flex: 0 0 auto;
+    width: 580px;
+    height: calc(100vh - 16px);
+    overflow: auto;
+    border-radius: 8px;
+    background: #2e3436;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+  #glade-host .gtk-window {
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+  }
+
+  #side {
+    flex: 0 0 340px;
+    height: calc(100vh - 16px);
+    background: #2b2b2b;
+    border: 1px solid #3d3d3d;
+    border-radius: 8px;
+    padding: 14px;
+    box-sizing: border-box;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+  }
+  #side h2 { font-size: 13px; margin: 0 0 8px; }
+
+  label.drop {
+    display: block;
+    border: 2px dashed #444;
+    border-radius: 6px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 12px;
+    flex: 0 0 auto;
+  }
+  label.drop:hover { border-color: #3584e4; color: #3584e4; }
+  input[type=file] { display: none; }
+
+  #log {
+    flex: 1 1 auto;
+    background: #141414;
+    border-radius: 4px;
+    padding: 8px;
+    overflow: auto;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    min-height: 0;
+  }
+  #log .signal { color: #9cdcfe; }
+  #log .ok     { color: #6a9955; }
+  #log .error  { color: #f48771; }
+  #log .state  { color: #dcdcaa; }
+</style>
+</head>
+<body>
+
+<div id="glade-host"></div>
+
+<div id="side">
+  <h2>Journal</h2>
+  <label class="drop">
+    📁 Charger todo.glade
+    <input type="file" id="file" accept=".glade,.xml">
+  </label>
+  <div id="log">—</div>
+</div>
+
+<script src="glade2html.js"></script>
+<script src="glade-viewer.js"></script>
+
+<script>
+(function () {
+  const host = document.getElementById('glade-host');
+  const logEl = document.getElementById('log');
+  let view = null;
+
+  const state = {
+    tasks: [],
+    nextId: 1,
+    filter: 'all',
+    sort: false,
+    currentPriority: 'Normale'
+  };
+
+  function log(msg, cls) {
+    cls = cls || 'signal';
+    const d = document.createElement('div');
+    d.className = cls;
+    d.textContent = msg;
+    logEl.appendChild(d);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function renderList() {
+    if (!view) return;
+    const listBox = view.getWidget('task_list');
+    if (!listBox) return;
+
+    let visible = state.tasks.slice();
+    if (state.filter === 'active') visible = visible.filter(function (t) { return !t.done; });
+    if (state.filter === 'done')   visible = visible.filter(function (t) { return t.done; });
+
+    if (state.sort) {
+      const order = { 'Haute': 0, 'Normale': 1, 'Basse': 2 };
+      visible.sort(function (a, b) { return order[a.priority] - order[b.priority]; });
+    }
+
+    listBox.innerHTML = '';
+    if (!visible.length) {
+      const empty = document.createElement('div');
+      empty.style.padding = '20px';
+      empty.style.textAlign = 'center';
+      empty.style.opacity = '.5';
+      empty.textContent = 'Aucune tâche';
+      listBox.appendChild(empty);
+    } else {
+      for (const t of visible) {
+        const row = document.createElement('div');
+        row.className = 'task-row prio-' + t.priority.toLowerCase() + (t.done ? ' done' : '');
+        row.dataset.taskId = t.id;
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = t.done;
+        cb.addEventListener('change', (function (id) {
+          return function () { toggleTask(id); };
+        })(t.id));
+
+        const title = document.createElement('span');
+        title.className = 'task-title';
+        title.textContent = t.title;
+
+        const del = document.createElement('button');
+        del.textContent = '✕';
+        del.className = 'gtk-button';
+        del.style.minHeight = '22px';
+        del.style.padding = '0 8px';
+        del.addEventListener('click', (function (id) {
+          return function () { removeTask(id); };
+        })(t.id));
+
+        row.appendChild(cb);
+        row.appendChild(title);
+        row.appendChild(del);
+        listBox.appendChild(row);
+      }
+    }
+
+    const counter = view.getWidget('counter_label');
+    if (counter) {
+      const remaining = state.tasks.filter(function (t) { return !t.done; }).length;
+      counter.textContent = remaining + ' / ' + state.tasks.length;
+    }
+
+    const prog = view.getWidget('progress');
+    if (prog) {
+      const pct = state.tasks.length
+        ? (state.tasks.filter(function (t) { return t.done; }).length / state.tasks.length)
+        : 0;
+      const fill = prog.querySelector('.gtk-progress-fill');
+      if (fill) fill.style.width = (pct * 100) + '%';
+    }
+  }
+
+  function addTask() {
+    const entry = view.getWidget('new_task_entry');
+    const title = (entry && entry.value ? entry.value : '').trim();
+    if (!title) { log('Titre vide, ignoré', 'error'); return; }
+    state.tasks.push({
+      id: state.nextId++,
+      title: title,
+      done: false,
+      priority: state.currentPriority
+    });
+    if (entry) entry.value = '';
+    log('+ Tâche "' + title + '" [' + state.currentPriority + ']', 'ok');
+    setStatus('Ajoutée : ' + title);
+    renderList();
+  }
+
+  function toggleTask(id) {
+    const t = state.tasks.find(function (x) { return x.id === id; });
+    if (!t) return;
+    t.done = !t.done;
+    log((t.done ? '✓' : '○') + ' ' + t.title, 'state');
+    renderList();
+  }
+
+  function removeTask(id) {
+    const i = state.tasks.findIndex(function (x) { return x.id === id; });
+    if (i < 0) return;
+    const t = state.tasks.splice(i, 1)[0];
+    log('✕ Supprimée : ' + t.title, 'error');
+    renderList();
+  }
+
+  function setStatus(txt) {
+    const el = view ? view.getWidget('status_label') : null;
+    if (el) el.textContent = txt;
+  }
+
+  const handlers = {
+    on_entry_changed: function (p) {
+      log('entry.changed : "' + p.value + '"');
+    },
+    on_entry_activate: function () {
+      log('entry.activate → ajout direct', 'ok');
+      addTask();
+    },
+    on_priority_changed: function () {
+      const sel = view.getWidget('priority_combo');
+      state.currentPriority = sel ? sel.value : 'Normale';
+      log('priorité : ' + state.currentPriority, 'state');
+    },
+    on_add_clicked: function () {
+      log('btn.add cliqué');
+      addTask();
+    },
+    on_filter_changed: function () {
+      const all = view.getWidget('filter_all');
+      const act = view.getWidget('filter_active');
+      const done = view.getWidget('filter_done');
+      const a = all ? all.querySelector('input') : null;
+      const b = act ? act.querySelector('input') : null;
+      const c = done ? done.querySelector('input') : null;
+      state.filter = (b && b.checked) ? 'active' : (c && c.checked) ? 'done' : 'all';
+      log('filtre : ' + state.filter, 'state');
+      renderList();
+    },
+    on_sort_toggled: function () {
+      const sw = view.getWidget('sort_switch');
+      const cb = sw ? sw.querySelector('input') : null;
+      state.sort = !!(cb && cb.checked);
+      log('tri auto : ' + state.sort, 'state');
+      renderList();
+    },
+    on_mark_all_clicked: function () {
+      state.tasks.forEach(function (t) { t.done = true; });
+      log('✓ Toutes marquées', 'ok');
+      setStatus('Toutes terminées');
+      renderList();
+    },
+    on_clear_done_clicked: function () {
+      const before = state.tasks.length;
+      state.tasks = state.tasks.filter(function (t) { return !t.done; });
+      log('🧹 ' + (before - state.tasks.length) + ' tâche(s) supprimée(s)', 'ok');
+      setStatus('Tâches terminées supprimées');
+      renderList();
+    },
+    on_clear_all_clicked: function () {
+      state.tasks = [];
+      log('🗑 Tout effacé', 'error');
+      setStatus('Liste vidée');
+      renderList();
+    },
+    on_export_clicked: function () {
+      const data = JSON.stringify(state.tasks, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'taches.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      log('⬇ Export JSON', 'ok');
+      setStatus('Exporté dans taches.json');
+    },
+    on_about_clicked: function () {
+      alert(
+        'Gestionnaire de tâches\n' +
+        'Glade2HTML demo\n\n' +
+        'Le fichier .glade déclare les signaux ;\n' +
+        'cette page les branche.'
+      );
+      log('ℹ À propos affiché', 'state');
+    }
+  };
+
+  function render(xml) {
+    if (view) view.destroy();
+    logEl.innerHTML = '';
+
+    view = GladeViewer.mountInline(host, xml, {
+      handlers: handlers,
+      onSignal: function (h, p) { log('↳ ' + h + ' [' + p.widgetId + ']'); },
+      strict: true
+    });
+
+    view.addStyle(
+      '#task_list { padding: 8px; }' +
+      '.task-row {' +
+      '  display: flex; align-items: center; gap: 8px;' +
+      '  padding: 6px 8px; border-radius: 4px;' +
+      '  background: #f8f8f8; border: 1px solid #e0ddd8;' +
+      '}' +
+      '.task-row.done .task-title { text-decoration: line-through; opacity: .5; }' +
+      '.task-row .task-title { flex: 1; }' +
+      '.task-row.prio-haute  { border-left: 4px solid #e01b24; }' +
+      '.task-row.prio-normale{ border-left: 4px solid #3584e4; }' +
+      '.task-row.prio-basse  { border-left: 4px solid #8a8a8a; }'
+    );
+
+    log('✔ ' + view.rootIds.length + ' fenêtre(s) — ' + view.signals.length + ' signaux', 'ok');
+    view.signals.forEach(function (s) {
+      log('   • ' + s.handlerName + ' (' + s.gtkSignal + ') → #' + s.widgetId);
+    });
+
+    renderList();
+  }
+
+  document.getElementById('file').addEventListener('change', async function (e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    render(await f.text());
+  });
+
+  log('En attente de todo.glade…', 'ok');
+})();
+</script>
+
+</body>
+</html>
